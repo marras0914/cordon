@@ -1,0 +1,94 @@
+# Cordon Helm Chart — Default Values
+# Override these in your own values file or with --set
+
+# ---------- gateway ----------
+gateway:
+  image:
+    repository: your-registry/cordon-gateway
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+
+  replicas: 1
+
+  service:
+    type: ClusterIP
+    port: 8000
+
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+  # URL of the real MCP server Cordon proxies to
+  realMcpServer: "http://your-mcp-server:8001"
+
+  # Policy engine: "yaml" (default) or "opa"
+  policyEngine: "opa"
+
+# ---------- OPA ----------
+opa:
+  enabled: true
+  image:
+    repository: openpolicyagent/opa
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+
+# ---------- database ----------
+database:
+  # Set to a PostgreSQL connection string to use Postgres instead of SQLite.
+  # Example: postgresql://cordon:password@postgres-service:5432/cordon
+  url: ""
+
+  # SQLite config (ignored when database.url is set)
+  sqlite:
+    storageClass: ""       # leave empty to use cluster default
+    storageSize: "1Gi"
+
+# ---------- auth ----------
+auth:
+  # Dashboard shared-key auth (simple, non-OIDC deployments)
+  dashboardKey: ""         # set to a strong random string or leave blank for open (dev)
+
+  # OIDC/SSO (takes priority over dashboardKey when all three are set)
+  oidc:
+    enabled: false
+    issuer: ""             # e.g. https://login.microsoftonline.com/{tenant}/v2.0
+    clientId: ""
+    clientSecret: ""       # stored in a Kubernetes Secret
+    redirectUri: ""        # e.g. https://cordon.example.com/dashboard/auth/callback
+    scopes: "openid email profile"
+
+  # Session signing key — REQUIRED in production (auto-generated if blank, not restart-safe)
+  sessionSecret: ""
+
+# ---------- PII redaction ----------
+pii:
+  enabled: true
+
+# ---------- ingress ----------
+ingress:
+  enabled: false
+  className: "nginx"
+  host: "cordon.example.com"
+  tls:
+    enabled: false
+    secretName: "cordon-tls"
+  annotations: {}
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+
+# ---------- pod settings ----------
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

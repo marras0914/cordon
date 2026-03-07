@@ -1,0 +1,17 @@
+{{- if not .Values.database.url }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "cordon.fullname" . }}-data
+  labels:
+    {{- include "cordon.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.database.sqlite.storageClass }}
+  storageClassName: {{ .Values.database.sqlite.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.database.sqlite.storageSize }}
+{{- end }}

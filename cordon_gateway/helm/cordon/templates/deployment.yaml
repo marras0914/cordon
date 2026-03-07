@@ -1,0 +1,123 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cordon.fullname" . }}
+  labels:
+    {{- include "cordon.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.gateway.replicas }}
+  selector:
+    matchLabels:
+      {{- include "cordon.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cordon.selectorLabels" . | nindent 8 }}
+      annotations:
+        # Force pod restart when configmaps / secrets change
+        checksum/secret:    {{ include (print $.Template.BasePath "/secret.yaml")    . | sha256sum }}
+        checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      containers:
+        # ── Cordon Gateway ──────────────────────────────────────────────────
+        - name: gateway
+          image: "{{ .Values.gateway.image.repository }}:{{ .Values.gateway.image.tag }}"
+          imagePullPolicy: {{ .Values.gateway.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: REAL_MCP_SERVER
+              value: {{ .Values.gateway.realMcpServer | quote }}
+            - name: CORDON_REDACT_PII
+              value: {{ .Values.pii.enabled | quote }}
+            {{- if .Values.opa.enabled }}
+            - name: CORDON_OPA_URL
+              value: "http://localhost:8181"
+            {{- end }}
+            - name: CORDON_DB
+              value: "/data/cordon_audit.db"
+          envFrom:
+            - secretRef:
+                name: {{ include "cordon.fullname" . }}-secrets
+          volumeMounts:
+            - name: policy-yaml
+              mountPath: /app/policy.yaml
+              subPath: policy.yaml
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /dashboard/
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /dashboard/
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.gateway.resources | nindent 12 }}
+
+        {{- if .Values.opa.enabled }}
+        # ── OPA Sidecar ─────────────────────────────────────────────────────
+        - name: opa
+          image: "{{ .Values.opa.image.repository }}:{{ .Values.opa.image.tag }}"
+          imagePullPolicy: {{ .Values.opa.image.pullPolicy }}
+          args:
+            - "run"
+            - "--server"
+            - "--addr=0.0.0.0:8181"
+            - "/policy/policy.rego"
+          ports:
+            - name: opa
+              containerPort: 8181
+              protocol: TCP
+          volumeMounts:
+            - name: policy-rego
+              mountPath: /policy
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8181
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.opa.resources | nindent 12 }}
+        {{- end }}
+
+      volumes:
+        - name: policy-yaml
+          configMap:
+            name: {{ include "cordon.fullname" . }}-policy-yaml
+        {{- if .Values.opa.enabled }}
+        - name: policy-rego
+          configMap:
+            name: {{ include "cordon.fullname" . }}-policy-rego
+        {{- end }}
+        - name: data
+          {{- if .Values.database.url }}
+          emptyDir: {}   # no local storage needed when using Postgres
+          {{- else }}
+          persistentVolumeClaim:
+            claimName: {{ include "cordon.fullname" . }}-data
+          {{- end }}

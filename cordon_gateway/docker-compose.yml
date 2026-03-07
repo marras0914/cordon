@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  cordon-gateway:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - REAL_MCP_SERVER=http://mock-mcp-server:8080
+      - CORDON_OPA_URL=http://opa:8181       # remove to fall back to policy.yaml
+      - CORDON_REDACT_PII=true
+    volumes:
+      - ./policy.yaml:/app/policy.yaml       # live-reloaded YAML fallback policy
+    depends_on:
+      - opa
+
+  opa:
+    image: openpolicyagent/opa:latest
+    ports:
+      - "8181:8181"
+    volumes:
+      - ./policy.rego:/policy.rego
+    command: ["run", "--server", "--addr", "0.0.0.0:8181", "/policy.rego"]
+
+  mock-mcp-server:
+    image: mendhak/http-https-echo:32
+    ports:
+      - "8001:8080"

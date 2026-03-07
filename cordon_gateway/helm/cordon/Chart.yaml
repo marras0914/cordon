@@ -1,0 +1,19 @@
+apiVersion: v2
+name: cordon
+description: >
+  Cordon MCP Security Gateway — Policy-as-Code reverse proxy for securing
+  Model Context Protocol servers with audit logging, HITL approvals,
+  OPA policy enforcement, PII redaction, and OIDC SSO.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - mcp
+  - security
+  - gateway
+  - opa
+  - audit
+  - enterprise
+home: https://github.com/your-org/cordon
+maintainers:
+  - name: Cordon Team

@@ -1,0 +1,53 @@
+---
+# policy.yaml — YAML fallback policy (also used when OPA is disabled)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cordon.fullname" . }}-policy-yaml
+  labels:
+    {{- include "cordon.labels" . | nindent 4 }}
+data:
+  policy.yaml: |
+    version: "1.0"
+    default_action: "ALLOW"
+    rules:
+      - tool: "delete_file"
+        action: "BLOCK"
+        reason: "Destructive file operations are restricted."
+      - tool: "execute_shell"
+        action: "REQUIRE_APPROVAL"
+        reason: "Shell commands require human oversight."
+      - tool: "write_historian"
+        action: "BLOCK"
+        reason: "EMS historian writes are read-only via this gateway."
+
+---
+# policy.rego — OPA Rego policy (used when opa.enabled=true)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cordon.fullname" . }}-policy-rego
+  labels:
+    {{- include "cordon.labels" . | nindent 4 }}
+data:
+  policy.rego: |
+    package cordon
+
+    default decision = {"action": "ALLOW", "reason": ""}
+
+    decision = {"action": "BLOCK", "reason": "Destructive file operations are restricted."} {
+        input.tool == "delete_file"
+    }
+    decision = {"action": "BLOCK", "reason": "Direct SCADA table access is prohibited."} {
+        input.tool == "run_query"
+        startswith(input.arguments.table, "SCADA_")
+    }
+    decision = {"action": "BLOCK", "reason": "EMS historian writes are read-only."} {
+        input.tool == "write_historian"
+    }
+    decision = {"action": "REQUIRE_APPROVAL", "reason": "Shell commands require human oversight."} {
+        input.tool == "execute_shell"
+    }
+    decision = {"action": "REQUIRE_APPROVAL", "reason": "Service restarts require operator sign-off."} {
+        input.tool == "restart_service"
+    }
