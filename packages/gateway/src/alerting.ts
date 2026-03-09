@@ -26,15 +26,19 @@ function fire(payload: object) {
 export function onBlock(toolName: string, reason: string, clientIp?: string | null) {
   if (!config.CORDON_WEBHOOK_URL || !config.CORDON_ALERT_ON_BLOCK) return;
   const ipStr = clientIp ? ` from \`${clientIp}\`` : "";
-  fire(slackPayload(
-    `:no_entry: *Cordon blocked tool call*\nTool: \`${toolName}\`${ipStr}\nReason: ${reason}`
-  ));
+  fire(
+    slackPayload(
+      `:no_entry: *Cordon blocked tool call*\nTool: \`${toolName}\`${ipStr}\nReason: ${reason}`,
+    ),
+  );
 }
 
 export function onApprovalQueued(toolName: string, pendingCount: number) {
   if (!config.CORDON_WEBHOOK_URL || !config.CORDON_ALERT_QUEUE_THRESHOLD) return;
   if (pendingCount < config.CORDON_ALERT_QUEUE_THRESHOLD) return;
-  fire(slackPayload(
-    `:warning: *Cordon approval queue has ${pendingCount} pending requests*\nLatest: \`${toolName}\` — operator action required.`
-  ));
+  fire(
+    slackPayload(
+      `:warning: *Cordon approval queue has ${pendingCount} pending requests*\nLatest: \`${toolName}\` — operator action required.`,
+    ),
+  );
 }

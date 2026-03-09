@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("../src/config.ts", () => ({
   config: {
@@ -62,7 +62,11 @@ describe("onBlock", () => {
   test("does not fire when ALERT_ON_BLOCK is false", async () => {
     vi.resetModules();
     vi.doMock("../src/config.ts", () => ({
-      config: { CORDON_WEBHOOK_URL: "http://fake/hook", CORDON_ALERT_ON_BLOCK: false, CORDON_ALERT_QUEUE_THRESHOLD: 3 },
+      config: {
+        CORDON_WEBHOOK_URL: "http://fake/hook",
+        CORDON_ALERT_ON_BLOCK: false,
+        CORDON_ALERT_QUEUE_THRESHOLD: 3,
+      },
     }));
     const { onBlock: onBlockOff } = await import("../src/alerting.ts");
     onBlockOff("t", "r", null);
@@ -73,7 +77,11 @@ describe("onBlock", () => {
   test("does not fire when no webhook URL", async () => {
     vi.resetModules();
     vi.doMock("../src/config.ts", () => ({
-      config: { CORDON_WEBHOOK_URL: undefined, CORDON_ALERT_ON_BLOCK: true, CORDON_ALERT_QUEUE_THRESHOLD: 3 },
+      config: {
+        CORDON_WEBHOOK_URL: undefined,
+        CORDON_ALERT_ON_BLOCK: true,
+        CORDON_ALERT_QUEUE_THRESHOLD: 3,
+      },
     }));
     const { onBlock: onBlockOff } = await import("../src/alerting.ts");
     onBlockOff("t", "r", null);
@@ -112,7 +120,11 @@ describe("onApprovalQueued", () => {
   test("does not fire when threshold is 0", async () => {
     vi.resetModules();
     vi.doMock("../src/config.ts", () => ({
-      config: { CORDON_WEBHOOK_URL: "http://fake/hook", CORDON_ALERT_ON_BLOCK: true, CORDON_ALERT_QUEUE_THRESHOLD: 0 },
+      config: {
+        CORDON_WEBHOOK_URL: "http://fake/hook",
+        CORDON_ALERT_ON_BLOCK: true,
+        CORDON_ALERT_QUEUE_THRESHOLD: 0,
+      },
     }));
     const { onApprovalQueued: aq } = await import("../src/alerting.ts");
     aq("t", 999);

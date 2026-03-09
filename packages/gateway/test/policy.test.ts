@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("../src/config.ts", () => ({
   config: {
@@ -10,7 +10,8 @@ vi.mock("../src/config.ts", () => ({
 
 // Mock filesystem reads
 vi.mock("node:fs", () => ({
-  readFileSync: vi.fn(() => `
+  readFileSync: vi.fn(
+    () => `
 version: "1.0"
 default_action: ALLOW
 rules:
@@ -20,7 +21,8 @@ rules:
   - tool: execute_shell
     action: REQUIRE_APPROVAL
     reason: Shell commands require oversight.
-`),
+`,
+  ),
   writeFileSync: vi.fn(),
 }));
 
@@ -57,9 +59,12 @@ describe("OPA policy", () => {
       config: { CORDON_OPA_URL: "http://opa:8181" },
       oidcEnabled: false,
     }));
-    vi.doMock("node:fs", () => ({ readFileSync: vi.fn(() => "version: '1.0'\ndefault_action: ALLOW\nrules: []") }));
-    globalThis.fetch = vi.fn(async () =>
-      new Response(JSON.stringify({ result: { action: "BLOCK", reason: "OPA said no" } }))
+    vi.doMock("node:fs", () => ({
+      readFileSync: vi.fn(() => "version: '1.0'\ndefault_action: ALLOW\nrules: []"),
+    }));
+    globalThis.fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ result: { action: "BLOCK", reason: "OPA said no" } })),
     );
     const { evaluatePolicy: evalOpa } = await import("../src/policy.ts");
     const result = await evalOpa("any_tool", {});
@@ -72,8 +77,12 @@ describe("OPA policy", () => {
       config: { CORDON_OPA_URL: "http://opa:8181" },
       oidcEnabled: false,
     }));
-    vi.doMock("node:fs", () => ({ readFileSync: vi.fn(() => "version: '1.0'\ndefault_action: ALLOW\nrules: []") }));
-    globalThis.fetch = vi.fn(async () => { throw new Error("timeout"); });
+    vi.doMock("node:fs", () => ({
+      readFileSync: vi.fn(() => "version: '1.0'\ndefault_action: ALLOW\nrules: []"),
+    }));
+    globalThis.fetch = vi.fn(async () => {
+      throw new Error("timeout");
+    });
     const { evaluatePolicy: evalFallback } = await import("../src/policy.ts");
     const result = await evalFallback("read_file", {});
     expect(result.action).toBe("ALLOW");
@@ -84,7 +93,9 @@ describe("OPA policy", () => {
       config: { CORDON_OPA_URL: "http://opa:8181" },
       oidcEnabled: false,
     }));
-    vi.doMock("node:fs", () => ({ readFileSync: vi.fn(() => "version: '1.0'\ndefault_action: ALLOW\nrules: []") }));
+    vi.doMock("node:fs", () => ({
+      readFileSync: vi.fn(() => "version: '1.0'\ndefault_action: ALLOW\nrules: []"),
+    }));
     let captured: unknown;
     globalThis.fetch = vi.fn(async (_, init) => {
       captured = JSON.parse((init as RequestInit).body as string);
@@ -93,8 +104,8 @@ describe("OPA policy", () => {
     const { evaluatePolicy: evalCapture } = await import("../src/policy.ts");
     await evalCapture("run_query", { table: "SCADA_RTU" }, "10.0.0.1");
     const input = (captured as { input: unknown }).input as Record<string, unknown>;
-    expect(input["tool"]).toBe("run_query");
-    expect((input["arguments"] as Record<string, unknown>)["table"]).toBe("SCADA_RTU");
-    expect(input["client_ip"]).toBe("10.0.0.1");
+    expect(input.tool).toBe("run_query");
+    expect((input.arguments as Record<string, unknown>).table).toBe("SCADA_RTU");
+    expect(input.client_ip).toBe("10.0.0.1");
   });
 });

@@ -18,15 +18,7 @@
     "test": "vitest run test/",
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch"
   },
-  "keywords": [
-    "mcp",
-    "security",
-    "gateway",
-    "ai",
-    "llm",
-    "policy",
-    "cordon"
-  ],
+  "keywords": ["mcp", "security", "gateway", "ai", "llm", "policy", "cordon"],
   "author": "marras0914",
   "license": "MIT",
   "repository": {

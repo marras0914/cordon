@@ -7,7 +7,9 @@ const SESSION_MAX_AGE = 8 * 60 * 60; // 8 hours
 
 // ---------- session ----------
 
-const sessionSecret = new TextEncoder().encode(config.CORDON_SESSION_SECRET.padEnd(32, "0").slice(0, 32));
+const sessionSecret = new TextEncoder().encode(
+  config.CORDON_SESSION_SECRET.padEnd(32, "0").slice(0, 32),
+);
 
 export interface SessionUser {
   sub: string;
@@ -46,7 +48,7 @@ let _oidcConfig: OidcConfig | null = null;
 async function getOidcConfig(): Promise<OidcConfig> {
   if (_oidcConfig) return _oidcConfig;
   const res = await fetch(`${config.CORDON_OIDC_ISSUER}/.well-known/openid-configuration`);
-  _oidcConfig = await res.json() as OidcConfig;
+  _oidcConfig = (await res.json()) as OidcConfig;
   return _oidcConfig;
 }
 
@@ -54,7 +56,9 @@ async function getOidcConfig(): Promise<OidcConfig> {
 
 function base64url(buf: ArrayBuffer): string {
   return btoa(String.fromCharCode(...new Uint8Array(buf)))
-    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
 }
 
 async function sha256(plain: string): Promise<string> {
@@ -100,7 +104,7 @@ export async function exchangeCode(code: string, verifier: string): Promise<Sess
       code_verifier: verifier,
     }),
   });
-  const tokens = await res.json() as { id_token: string };
+  const tokens = (await res.json()) as { id_token: string };
   return validateIdToken(tokens.id_token, oidc.jwks_uri);
 }
 
@@ -112,8 +116,8 @@ async function validateIdToken(idToken: string, jwksUri: string): Promise<Sessio
   });
   return {
     sub: payload.sub!,
-    email: (payload["email"] as string) ?? payload.sub!,
-    name: payload["name"] as string | undefined,
+    email: (payload.email as string) ?? payload.sub!,
+    name: payload.name as string | undefined,
   };
 }
 

@@ -1,6 +1,12 @@
-import { describe, test, expect, vi, beforeEach } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 const mock = vi.fn;
-import { CordonClient, PolicyBlocked, ApprovalTimeout, RateLimited, CordonError } from "../src/index.ts";
+import {
+  ApprovalTimeout,
+  CordonClient,
+  CordonError,
+  PolicyBlocked,
+  RateLimited,
+} from "../src/index.ts";
 
 const APPROVAL_ID = "550e8400-e29b-41d4-a716-446655440000";
 const APPROVAL_MSG = `Approval required. Retry with header X-Cordon-Approval-Id: ${APPROVAL_ID}`;
@@ -10,7 +16,7 @@ function mockFetch(...responses: object[]) {
   return mock(() =>
     Promise.resolve({
       json: () => Promise.resolve(responses[i++] ?? responses.at(-1)),
-    })
+    }),
   );
 }
 
@@ -49,13 +55,19 @@ describe("CordonClient.callTool", () => {
 
 describe("PolicyBlocked", () => {
   test("raises on -32001", async () => {
-    globalThis.fetch = mockFetch({ jsonrpc: "2.0", error: { code: -32001, message: "Blocked: reason" } });
+    globalThis.fetch = mockFetch({
+      jsonrpc: "2.0",
+      error: { code: -32001, message: "Blocked: reason" },
+    });
     await expect(client.callTool("delete_file", {})).rejects.toBeInstanceOf(PolicyBlocked);
   });
 
   test("includes tool name and reason", async () => {
-    globalThis.fetch = mockFetch({ jsonrpc: "2.0", error: { code: -32001, message: "Destructive operation" } });
-    const err = await client.callTool("delete_file", {}).catch((e) => e) as PolicyBlocked;
+    globalThis.fetch = mockFetch({
+      jsonrpc: "2.0",
+      error: { code: -32001, message: "Destructive operation" },
+    });
+    const err = (await client.callTool("delete_file", {}).catch((e) => e)) as PolicyBlocked;
     expect(err.toolName).toBe("delete_file");
     expect(err.reason).toContain("Destructive operation");
   });
@@ -63,13 +75,19 @@ describe("PolicyBlocked", () => {
 
 describe("RateLimited", () => {
   test("raises on -32005", async () => {
-    globalThis.fetch = mockFetch({ jsonrpc: "2.0", error: { code: -32005, message: "Retry after 30s." } });
+    globalThis.fetch = mockFetch({
+      jsonrpc: "2.0",
+      error: { code: -32005, message: "Retry after 30s." },
+    });
     await expect(client.callTool("t", {})).rejects.toBeInstanceOf(RateLimited);
   });
 
   test("parses retry_after", async () => {
-    globalThis.fetch = mockFetch({ jsonrpc: "2.0", error: { code: -32005, message: "rate limit. Retry after 45s." } });
-    const err = await client.callTool("t", {}).catch((e) => e) as RateLimited;
+    globalThis.fetch = mockFetch({
+      jsonrpc: "2.0",
+      error: { code: -32005, message: "rate limit. Retry after 45s." },
+    });
+    const err = (await client.callTool("t", {}).catch((e) => e)) as RateLimited;
     expect(err.retryAfter).toBe(45);
   });
 });
@@ -107,26 +125,36 @@ describe("HITL approval", () => {
       { jsonrpc: "2.0", error: { code: -32002, message: APPROVAL_MSG } },
     );
     await expect(
-      client.callTool("execute_shell", {}, { approvalTimeoutMs: 0 })
+      client.callTool("execute_shell", {}, { approvalTimeoutMs: 0 }),
     ).rejects.toBeInstanceOf(ApprovalTimeout);
   });
 
   test("ApprovalTimeout includes approvalId", async () => {
-    globalThis.fetch = mockFetch({ jsonrpc: "2.0", error: { code: -32002, message: APPROVAL_MSG } });
-    const err = await client.callTool("t", {}, { approvalTimeoutMs: 0 }).catch((e) => e) as ApprovalTimeout;
+    globalThis.fetch = mockFetch({
+      jsonrpc: "2.0",
+      error: { code: -32002, message: APPROVAL_MSG },
+    });
+    const err = (await client
+      .callTool("t", {}, { approvalTimeoutMs: 0 })
+      .catch((e) => e)) as ApprovalTimeout;
     expect(err.approvalId).toBe(APPROVAL_ID);
   });
 
   test("raises CordonError on unparseable approval id", async () => {
-    globalThis.fetch = mockFetch({ jsonrpc: "2.0", error: { code: -32002, message: "No UUID here." } });
-    await expect(client.callTool("t", {}, { approvalTimeoutMs: 60_000 })).rejects.toBeInstanceOf(CordonError);
+    globalThis.fetch = mockFetch({
+      jsonrpc: "2.0",
+      error: { code: -32002, message: "No UUID here." },
+    });
+    await expect(client.callTool("t", {}, { approvalTimeoutMs: 60_000 })).rejects.toBeInstanceOf(
+      CordonError,
+    );
   });
 });
 
 describe("callTools (parallel)", () => {
   test("returns array of results", async () => {
     globalThis.fetch = mock(() =>
-      Promise.resolve({ json: () => Promise.resolve({ jsonrpc: "2.0", result: { ok: true } }) })
+      Promise.resolve({ json: () => Promise.resolve({ jsonrpc: "2.0", result: { ok: true } }) }),
     );
     const results = await client.callTools([
       { toolName: "a", args: {} },

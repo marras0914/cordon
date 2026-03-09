@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev":   "bun run --watch src/index.ts",
+    "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
     "build": "bun build src/index.ts --target bun --outdir dist",
-    "test":  "vitest run test/"
+    "test": "vitest run test/"
   },
   "dependencies": {
     "drizzle-orm": "^0.36.4",

@@ -60,8 +60,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm install -g @biomejs/biome
-      - run: biome ci .
+      - run: npm install -g @biomejs/biome@1.9.4
+      - run: biome ci packages/
 
   helm-lint:
     name: Helm lint

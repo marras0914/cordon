@@ -1,11 +1,10 @@
 import { Hono } from "hono";
-import { streamSSE } from "hono/streaming";
+import * as alerting from "./alerting.ts";
 import { config } from "./config.ts";
 import * as db from "./db.ts";
-import * as policy from "./policy.ts";
 import * as pii from "./pii.ts";
+import * as policy from "./policy.ts";
 import * as rateLimit from "./rate-limit.ts";
-import * as alerting from "./alerting.ts";
 
 export const proxy = new Hono();
 
@@ -13,9 +12,7 @@ export const proxy = new Hono();
 
 proxy.get("/sse", async (c) => {
   const upstream = await fetch(`${config.REAL_MCP_SERVER}/sse`, {
-    headers: Object.fromEntries(
-      [...c.req.raw.headers.entries()].filter(([k]) => k !== "host")
-    ),
+    headers: Object.fromEntries([...c.req.raw.headers.entries()].filter(([k]) => k !== "host")),
   });
 
   return new Response(upstream.body, {
@@ -39,7 +36,7 @@ proxy.post("/messages", async (c) => {
 
   const method = payload.method ?? "unknown";
   const requestId = payload.id;
-  const clientIp = c.req.header("x-forwarded-for") ?? c.env?.["REMOTE_ADDR"] ?? null;
+  const clientIp = c.req.header("x-forwarded-for") ?? c.env?.REMOTE_ADDR ?? null;
 
   if (method === "tools/call") {
     const toolName = payload.params?.name ?? "";
@@ -49,11 +46,22 @@ proxy.post("/messages", async (c) => {
     // Rate limit
     const { allowed, retryAfter } = rateLimit.check(clientIp ?? "unknown");
     if (!allowed) {
-      await db.logEvent({ method, action: "BLOCK", toolName, reason: "Rate limit exceeded", requestId, clientIp });
+      await db.logEvent({
+        method,
+        action: "BLOCK",
+        toolName,
+        reason: "Rate limit exceeded",
+        requestId,
+        clientIp,
+      });
       alerting.onBlock(toolName, "Rate limit exceeded", clientIp);
       return c.json({
-        jsonrpc: "2.0", id: requestId,
-        error: { code: -32005, message: `Cordon: rate limit exceeded. Retry after ${retryAfter}s.` },
+        jsonrpc: "2.0",
+        id: requestId,
+        error: {
+          code: -32005,
+          message: `Cordon: rate limit exceeded. Retry after ${retryAfter}s.`,
+        },
       });
     }
 
@@ -64,7 +72,8 @@ proxy.post("/messages", async (c) => {
       await db.logEvent({ method, action: "BLOCK", toolName, reason, requestId, clientIp });
       alerting.onBlock(toolName, reason, clientIp);
       return c.json({
-        jsonrpc: "2.0", id: requestId,
+        jsonrpc: "2.0",
+        id: requestId,
         error: { code: -32001, message: `Cordon Policy Violation: ${reason}` },
       });
     }
@@ -81,42 +90,81 @@ proxy.post("/messages", async (c) => {
         const approval = await db.getApproval(approvalId);
 
         if (approval?.status === "APPROVED") {
-          await db.logEvent({ method, action: "ALLOW", toolName, reason: "Human approved", requestId, clientIp });
-          return forward(c, payload, requestId);
+          await db.logEvent({
+            method,
+            action: "ALLOW",
+            toolName,
+            reason: "Human approved",
+            requestId,
+            clientIp,
+          });
+          return forward(payload, requestId);
         }
         if (approval?.status === "REJECTED") {
-          await db.logEvent({ method, action: "BLOCK", toolName, reason: "Human rejected", requestId, clientIp });
+          await db.logEvent({
+            method,
+            action: "BLOCK",
+            toolName,
+            reason: "Human rejected",
+            requestId,
+            clientIp,
+          });
           return c.json({
-            jsonrpc: "2.0", id: requestId,
+            jsonrpc: "2.0",
+            id: requestId,
             error: { code: -32001, message: "Request rejected by human operator." },
           });
         }
         if (approval?.status === "PENDING") {
           return c.json({
-            jsonrpc: "2.0", id: requestId,
-            error: { code: -32002, message: `Approval required. Retry with header X-Cordon-Approval-Id: ${approvalId}` },
+            jsonrpc: "2.0",
+            id: requestId,
+            error: {
+              code: -32002,
+              message: `Approval required. Retry with header X-Cordon-Approval-Id: ${approvalId}`,
+            },
           });
         }
       }
 
       const aid = crypto.randomUUID();
-      await db.queueApproval({ id: aid, toolName, arguments: JSON.stringify(safeArgs), requestId, clientIp });
-      await db.logEvent({ method, action: "REQUIRE_APPROVAL", toolName, reason, requestId, clientIp });
+      await db.queueApproval({
+        id: aid,
+        toolName,
+        arguments: JSON.stringify(safeArgs),
+        requestId,
+        clientIp,
+      });
+      await db.logEvent({
+        method,
+        action: "REQUIRE_APPROVAL",
+        toolName,
+        reason,
+        requestId,
+        clientIp,
+      });
       alerting.onApprovalQueued(toolName, await db.pendingApprovalCount());
 
       return c.json({
-        jsonrpc: "2.0", id: requestId,
-        error: { code: -32002, message: `Approval required. Retry with header X-Cordon-Approval-Id: ${aid}` },
+        jsonrpc: "2.0",
+        id: requestId,
+        error: {
+          code: -32002,
+          message: `Approval required. Retry with header X-Cordon-Approval-Id: ${aid}`,
+        },
       });
     }
   }
 
-  return forward(c, payload, requestId);
+  return forward(payload, requestId);
 });
 
 // ---------- forward ----------
 
-async function forward(payload: unknown, requestId: string | number | undefined): Promise<Response> {
+async function forward(
+  payload: unknown,
+  requestId: string | number | undefined,
+): Promise<Response> {
   try {
     const upstream = await fetch(`${config.REAL_MCP_SERVER}/messages`, {
       method: "POST",
@@ -128,9 +176,16 @@ async function forward(payload: unknown, requestId: string | number | undefined)
       headers: { "Content-Type": "application/json" },
     });
   } catch {
-    return Response.json({
-      jsonrpc: "2.0", id: requestId,
-      error: { code: -32003, message: `Cordon: backend unreachable at ${config.REAL_MCP_SERVER}` },
-    }, { status: 502 });
+    return Response.json(
+      {
+        jsonrpc: "2.0",
+        id: requestId,
+        error: {
+          code: -32003,
+          message: `Cordon: backend unreachable at ${config.REAL_MCP_SERVER}`,
+        },
+      },
+      { status: 502 },
+    );
   }
 }

@@ -1,15 +1,16 @@
 import type { SessionUser } from "./auth.ts";
 
 const PAGES = [
-  { path: "/dashboard/",         label: "Audit Log",  key: "audit"     },
-  { path: "/dashboard/approvals", label: "Approvals",  key: "approvals" },
-  { path: "/dashboard/policy",    label: "Policy",     key: "policy"    },
-  { path: "/dashboard/export",    label: "Export",     key: "export"    },
+  { path: "/dashboard/", label: "Audit Log", key: "audit" },
+  { path: "/dashboard/approvals", label: "Approvals", key: "approvals" },
+  { path: "/dashboard/policy", label: "Policy", key: "policy" },
+  { path: "/dashboard/export", label: "Export", key: "export" },
 ] as const;
 
 export function nav(active: string, user: SessionUser | null): string {
-  const links = PAGES.map(({ path, label, key }) =>
-    `<a href="${path}"${key === active ? ' class="active"' : ""}>${label}</a>`
+  const links = PAGES.map(
+    ({ path, label, key }) =>
+      `<a href="${path}"${key === active ? ' class="active"' : ""}>${label}</a>`,
   ).join("");
 
   const userInfo = user
@@ -19,7 +20,12 @@ export function nav(active: string, user: SessionUser | null): string {
   return `<nav>${links}<span class="nav-right">${userInfo}</span></nav>`;
 }
 
-export function layout(title: string, body: string, active: string, user: SessionUser | null): string {
+export function layout(
+  title: string,
+  body: string,
+  active: string,
+  user: SessionUser | null,
+): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

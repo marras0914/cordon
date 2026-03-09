@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 // ── mocks must be declared before imports ────────────────────────────────────
 
@@ -7,7 +7,7 @@ vi.mock("../src/config.ts", () => ({
     REAL_MCP_SERVER: "http://localhost:8001",
     CORDON_OPA_URL: undefined,
     CORDON_REDACT_PII: false,
-    CORDON_RATE_LIMIT: 0,   // disabled — tested separately
+    CORDON_RATE_LIMIT: 0, // disabled — tested separately
     CORDON_RATE_WINDOW: 60,
     CORDON_WEBHOOK_URL: undefined,
     CORDON_ALERT_ON_BLOCK: false,
@@ -41,22 +41,30 @@ vi.mock("../src/policy.ts", () => ({
   evaluatePolicy: vi.fn(async () => ({ action: "ALLOW" as const, reason: "" })),
 }));
 
-import { proxy } from "../src/proxy.ts";
 import * as dbMock from "../src/db.ts";
-import * as rateLimitMock from "../src/rate-limit.ts";
 import * as policyMod from "../src/policy.ts";
+import { proxy } from "../src/proxy.ts";
+import * as rateLimitMock from "../src/rate-limit.ts";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 function rpcBody(method: string, toolName: string, args = {}, id = 1) {
-  return JSON.stringify({ jsonrpc: "2.0", id, method, params: { name: toolName, arguments: args } });
+  return JSON.stringify({
+    jsonrpc: "2.0",
+    id,
+    method,
+    params: { name: toolName, arguments: args },
+  });
 }
 
 function mockUpstream(body: unknown, status = 200) {
-  globalThis.fetch = vi.fn(async () => new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  }));
+  globalThis.fetch = vi.fn(
+    async () =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "Content-Type": "application/json" },
+      }),
+  );
 }
 
 async function post(body: string, headers: Record<string, string> = {}) {
@@ -90,7 +98,7 @@ describe("ALLOW", () => {
     mockUpstream({ jsonrpc: "2.0", id: 1, result: {} });
     await post(rpcBody("tools/call", "read_file"));
     expect(vi.mocked(dbMock.logEvent)).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "ALLOW" })
+      expect.objectContaining({ action: "ALLOW" }),
     );
   });
 
@@ -106,14 +114,20 @@ describe("ALLOW", () => {
 
 describe("BLOCK", () => {
   test("returns -32001 error", async () => {
-    vi.mocked(policyMod.evaluatePolicy).mockResolvedValue({ action: "BLOCK", reason: "Destructive" });
+    vi.mocked(policyMod.evaluatePolicy).mockResolvedValue({
+      action: "BLOCK",
+      reason: "Destructive",
+    });
     const res = await post(rpcBody("tools/call", "delete_file"));
     const body = await res.json();
     expect(body.error.code).toBe(-32001);
   });
 
   test("error message includes reason", async () => {
-    vi.mocked(policyMod.evaluatePolicy).mockResolvedValue({ action: "BLOCK", reason: "Not allowed here" });
+    vi.mocked(policyMod.evaluatePolicy).mockResolvedValue({
+      action: "BLOCK",
+      reason: "Not allowed here",
+    });
     const res = await post(rpcBody("tools/call", "delete_file"));
     const body = await res.json();
     expect(body.error.message).toContain("Not allowed here");
@@ -123,7 +137,7 @@ describe("BLOCK", () => {
     vi.mocked(policyMod.evaluatePolicy).mockResolvedValue({ action: "BLOCK", reason: "reason" });
     await post(rpcBody("tools/call", "delete_file"));
     expect(vi.mocked(dbMock.logEvent)).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "BLOCK", toolName: "delete_file" })
+      expect.objectContaining({ action: "BLOCK", toolName: "delete_file" }),
     );
   });
 
@@ -156,7 +170,7 @@ describe("rate limit", () => {
     vi.mocked(rateLimitMock.check).mockReturnValue({ allowed: false, retryAfter: 10 });
     await post(rpcBody("tools/call", "read_file"));
     expect(vi.mocked(dbMock.logEvent)).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "BLOCK", reason: "Rate limit exceeded" })
+      expect.objectContaining({ action: "BLOCK", reason: "Rate limit exceeded" }),
     );
   });
 });
@@ -165,7 +179,10 @@ describe("rate limit", () => {
 
 describe("REQUIRE_APPROVAL", () => {
   test("queues and returns -32002 with approval ID", async () => {
-    vi.mocked(policyMod.evaluatePolicy).mockResolvedValue({ action: "REQUIRE_APPROVAL", reason: "Needs sign-off" });
+    vi.mocked(policyMod.evaluatePolicy).mockResolvedValue({
+      action: "REQUIRE_APPROVAL",
+      reason: "Needs sign-off",
+    });
     const res = await post(rpcBody("tools/call", "execute_shell"));
     const body = await res.json();
     expect(body.error.code).toBe(-32002);
@@ -174,11 +191,20 @@ describe("REQUIRE_APPROVAL", () => {
   });
 
   test("APPROVED: forwards to upstream", async () => {
-    vi.mocked(policyMod.evaluatePolicy).mockResolvedValue({ action: "REQUIRE_APPROVAL", reason: "" });
+    vi.mocked(policyMod.evaluatePolicy).mockResolvedValue({
+      action: "REQUIRE_APPROVAL",
+      reason: "",
+    });
     vi.mocked(dbMock.getApproval).mockResolvedValue({
-      id: "test-uuid", status: "APPROVED", tool_name: "execute_shell",
-      timestamp: "", arguments: null, request_id: null, client_ip: null,
-      resolved_at: null, resolved_by: null,
+      id: "test-uuid",
+      status: "APPROVED",
+      tool_name: "execute_shell",
+      timestamp: "",
+      arguments: null,
+      request_id: null,
+      client_ip: null,
+      resolved_at: null,
+      resolved_by: null,
     });
     mockUpstream({ jsonrpc: "2.0", id: 1, result: { ok: true } });
     const res = await post(rpcBody("tools/call", "execute_shell"), {
@@ -189,11 +215,20 @@ describe("REQUIRE_APPROVAL", () => {
   });
 
   test("REJECTED: returns -32001", async () => {
-    vi.mocked(policyMod.evaluatePolicy).mockResolvedValue({ action: "REQUIRE_APPROVAL", reason: "" });
+    vi.mocked(policyMod.evaluatePolicy).mockResolvedValue({
+      action: "REQUIRE_APPROVAL",
+      reason: "",
+    });
     vi.mocked(dbMock.getApproval).mockResolvedValue({
-      id: "test-uuid", status: "REJECTED", tool_name: "execute_shell",
-      timestamp: "", arguments: null, request_id: null, client_ip: null,
-      resolved_at: null, resolved_by: null,
+      id: "test-uuid",
+      status: "REJECTED",
+      tool_name: "execute_shell",
+      timestamp: "",
+      arguments: null,
+      request_id: null,
+      client_ip: null,
+      resolved_at: null,
+      resolved_by: null,
     });
     const res = await post(rpcBody("tools/call", "execute_shell"), {
       "X-Cordon-Approval-Id": "test-uuid",
@@ -204,11 +239,20 @@ describe("REQUIRE_APPROVAL", () => {
   });
 
   test("PENDING: returns same -32002 with same ID", async () => {
-    vi.mocked(policyMod.evaluatePolicy).mockResolvedValue({ action: "REQUIRE_APPROVAL", reason: "" });
+    vi.mocked(policyMod.evaluatePolicy).mockResolvedValue({
+      action: "REQUIRE_APPROVAL",
+      reason: "",
+    });
     vi.mocked(dbMock.getApproval).mockResolvedValue({
-      id: "test-uuid", status: "PENDING", tool_name: "execute_shell",
-      timestamp: "", arguments: null, request_id: null, client_ip: null,
-      resolved_at: null, resolved_by: null,
+      id: "test-uuid",
+      status: "PENDING",
+      tool_name: "execute_shell",
+      timestamp: "",
+      arguments: null,
+      request_id: null,
+      client_ip: null,
+      resolved_at: null,
+      resolved_by: null,
     });
     const res = await post(rpcBody("tools/call", "execute_shell"), {
       "X-Cordon-Approval-Id": "test-uuid",
@@ -223,7 +267,9 @@ describe("REQUIRE_APPROVAL", () => {
 
 describe("backend unreachable", () => {
   test("returns -32003 when upstream throws", async () => {
-    globalThis.fetch = vi.fn(async () => { throw new Error("ECONNREFUSED"); });
+    globalThis.fetch = vi.fn(async () => {
+      throw new Error("ECONNREFUSED");
+    });
     const res = await post(rpcBody("tools/call", "read_file"));
     expect(res.status).toBe(502);
     const body = await res.json();

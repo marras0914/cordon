@@ -49,14 +49,6 @@ async function connect() {
   return { type: "sqlite" as const, client: _sqlite };
 }
 
-const PH = config.DATABASE_URL ? "$" : "?";
-let _phIdx = 0;
-function ph() {
-  if (config.DATABASE_URL) return `$${++_phIdx}`;
-  return "?";
-}
-function resetPh() { _phIdx = 0; }
-
 // ---------- schema ----------
 
 export async function initDb() {
@@ -95,7 +87,11 @@ export async function initDb() {
       "ALTER TABLE audit_log ADD COLUMN user_email TEXT",
       "ALTER TABLE approval_queue ADD COLUMN resolved_by TEXT",
     ]) {
-      try { db.run(sql); } catch { /* column exists */ }
+      try {
+        db.run(sql);
+      } catch {
+        /* column exists */
+      }
     }
   } else {
     const pg = client as ReturnType<typeof import("postgres").default>;
@@ -149,9 +145,16 @@ export async function logEvent(params: {
     db.run(
       `INSERT INTO audit_log (timestamp, tool_name, method, action, reason, request_id, client_ip, user_email)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [ts, params.toolName ?? null, params.method, params.action,
-       params.reason ?? null, params.requestId != null ? String(params.requestId) : null,
-       params.clientIp ?? null, params.userEmail ?? null],
+      [
+        ts,
+        params.toolName ?? null,
+        params.method,
+        params.action,
+        params.reason ?? null,
+        params.requestId != null ? String(params.requestId) : null,
+        params.clientIp ?? null,
+        params.userEmail ?? null,
+      ],
     );
   } else {
     const pg = client as ReturnType<typeof import("postgres").default>;
@@ -168,12 +171,16 @@ export async function getLogs(limit = 100, offset = 0): Promise<AuditRow[]> {
   const { type, client } = await connect();
   if (type === "sqlite") {
     const db = client as import("bun:sqlite").Database;
-    return db.query<AuditRow, [number, number]>(
-      "SELECT * FROM audit_log ORDER BY id DESC LIMIT ? OFFSET ?"
-    ).all(limit, offset);
+    return db
+      .query<AuditRow, [number, number]>(
+        "SELECT * FROM audit_log ORDER BY id DESC LIMIT ? OFFSET ?",
+      )
+      .all(limit, offset);
   }
   const pg = client as ReturnType<typeof import("postgres").default>;
-  return pg`SELECT * FROM audit_log ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}` as Promise<AuditRow[]>;
+  return pg`SELECT * FROM audit_log ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}` as Promise<
+    AuditRow[]
+  >;
 }
 
 export async function getLogsFiltered(params: {
@@ -187,7 +194,10 @@ export async function getLogsFiltered(params: {
   const clauses: string[] = [];
   const args: string[] = [];
 
-  if (start) { clauses.push("timestamp >= ?"); args.push(start); }
+  if (start) {
+    clauses.push("timestamp >= ?");
+    args.push(start);
+  }
   if (end) {
     const endDt = new Date(new Date(end).getTime() + 86_400_000).toISOString().slice(0, 10);
     clauses.push("timestamp < ?");
@@ -198,14 +208,14 @@ export async function getLogsFiltered(params: {
 
   if (type === "sqlite") {
     const db = client as import("bun:sqlite").Database;
-    return db.query<AuditRow, string[]>(
-      `SELECT * FROM audit_log ${where} ORDER BY timestamp ASC LIMIT ?`
-    ).all(...args, String(limit));
+    return db
+      .query<AuditRow, string[]>(`SELECT * FROM audit_log ${where} ORDER BY timestamp ASC LIMIT ?`)
+      .all(...args, String(limit));
   }
 
   const pg = client as ReturnType<typeof import("postgres").default>;
   // Postgres path uses tagged template — build dynamically
-  let sql = `SELECT * FROM audit_log ${where} ORDER BY timestamp ASC LIMIT ${limit}`;
+  const sql = `SELECT * FROM audit_log ${where} ORDER BY timestamp ASC LIMIT ${limit}`;
   return pg.unsafe(sql, args) as Promise<AuditRow[]>;
 }
 
@@ -213,7 +223,9 @@ export async function getLogCount(): Promise<number> {
   const { type, client } = await connect();
   if (type === "sqlite") {
     const db = client as import("bun:sqlite").Database;
-    return (db.query<{ count: number }, []>("SELECT COUNT(*) as count FROM audit_log").get())?.count ?? 0;
+    return (
+      db.query<{ count: number }, []>("SELECT COUNT(*) as count FROM audit_log").get()?.count ?? 0
+    );
   }
   const pg = client as ReturnType<typeof import("postgres").default>;
   const [row] = await pg`SELECT COUNT(*)::int as count FROM audit_log`;
@@ -237,8 +249,14 @@ export async function queueApproval(params: {
     db.run(
       `INSERT INTO approval_queue (id, timestamp, tool_name, arguments, request_id, client_ip, status)
        VALUES (?, ?, ?, ?, ?, ?, 'PENDING')`,
-      [params.id, ts, params.toolName, params.arguments,
-       params.requestId != null ? String(params.requestId) : null, params.clientIp ?? null],
+      [
+        params.id,
+        ts,
+        params.toolName,
+        params.arguments,
+        params.requestId != null ? String(params.requestId) : null,
+        params.clientIp ?? null,
+      ],
     );
   } else {
     const pg = client as ReturnType<typeof import("postgres").default>;
@@ -255,22 +273,30 @@ export async function getApproval(id: string): Promise<ApprovalRow | null> {
   const { type, client } = await connect();
   if (type === "sqlite") {
     const db = client as import("bun:sqlite").Database;
-    return db.query<ApprovalRow, [string]>("SELECT * FROM approval_queue WHERE id = ?").get(id) ?? null;
+    return (
+      db.query<ApprovalRow, [string]>("SELECT * FROM approval_queue WHERE id = ?").get(id) ?? null
+    );
   }
   const pg = client as ReturnType<typeof import("postgres").default>;
   const [row] = await pg`SELECT * FROM approval_queue WHERE id = ${id}`;
   return (row as ApprovalRow) ?? null;
 }
 
-export async function resolveApproval(id: string, status: "APPROVED" | "REJECTED", resolvedBy?: string) {
+export async function resolveApproval(
+  id: string,
+  status: "APPROVED" | "REJECTED",
+  resolvedBy?: string,
+) {
   const { type, client } = await connect();
   const ts = new Date().toISOString();
   if (type === "sqlite") {
     const db = client as import("bun:sqlite").Database;
-    db.run(
-      "UPDATE approval_queue SET status = ?, resolved_at = ?, resolved_by = ? WHERE id = ?",
-      [status, ts, resolvedBy ?? null, id],
-    );
+    db.run("UPDATE approval_queue SET status = ?, resolved_at = ?, resolved_by = ? WHERE id = ?", [
+      status,
+      ts,
+      resolvedBy ?? null,
+      id,
+    ]);
   } else {
     const pg = client as ReturnType<typeof import("postgres").default>;
     await pg`UPDATE approval_queue SET status = ${status}, resolved_at = ${ts}, resolved_by = ${resolvedBy ?? null} WHERE id = ${id}`;
@@ -281,35 +307,46 @@ export async function getPendingApprovals(): Promise<ApprovalRow[]> {
   const { type, client } = await connect();
   if (type === "sqlite") {
     const db = client as import("bun:sqlite").Database;
-    return db.query<ApprovalRow, []>(
-      "SELECT * FROM approval_queue WHERE status = 'PENDING' ORDER BY timestamp ASC"
-    ).all();
+    return db
+      .query<ApprovalRow, []>(
+        "SELECT * FROM approval_queue WHERE status = 'PENDING' ORDER BY timestamp ASC",
+      )
+      .all();
   }
   const pg = client as ReturnType<typeof import("postgres").default>;
-  return pg`SELECT * FROM approval_queue WHERE status = 'PENDING' ORDER BY timestamp ASC` as Promise<ApprovalRow[]>;
+  return pg`SELECT * FROM approval_queue WHERE status = 'PENDING' ORDER BY timestamp ASC` as Promise<
+    ApprovalRow[]
+  >;
 }
 
 export async function getAllApprovals(limit = 50): Promise<ApprovalRow[]> {
   const { type, client } = await connect();
   if (type === "sqlite") {
     const db = client as import("bun:sqlite").Database;
-    return db.query<ApprovalRow, [number]>(
-      "SELECT * FROM approval_queue ORDER BY timestamp DESC LIMIT ?"
-    ).all(limit);
+    return db
+      .query<ApprovalRow, [number]>("SELECT * FROM approval_queue ORDER BY timestamp DESC LIMIT ?")
+      .all(limit);
   }
   const pg = client as ReturnType<typeof import("postgres").default>;
-  return pg`SELECT * FROM approval_queue ORDER BY timestamp DESC LIMIT ${limit}` as Promise<ApprovalRow[]>;
+  return pg`SELECT * FROM approval_queue ORDER BY timestamp DESC LIMIT ${limit}` as Promise<
+    ApprovalRow[]
+  >;
 }
 
 export async function pendingApprovalCount(): Promise<number> {
   const { type, client } = await connect();
   if (type === "sqlite") {
     const db = client as import("bun:sqlite").Database;
-    return (db.query<{ count: number }, []>(
-      "SELECT COUNT(*) as count FROM approval_queue WHERE status = 'PENDING'"
-    ).get())?.count ?? 0;
+    return (
+      db
+        .query<{ count: number }, []>(
+          "SELECT COUNT(*) as count FROM approval_queue WHERE status = 'PENDING'",
+        )
+        .get()?.count ?? 0
+    );
   }
   const pg = client as ReturnType<typeof import("postgres").default>;
-  const [row] = await pg`SELECT COUNT(*)::int as count FROM approval_queue WHERE status = 'PENDING'`;
+  const [row] =
+    await pg`SELECT COUNT(*)::int as count FROM approval_queue WHERE status = 'PENDING'`;
   return (row as { count: number }).count;
 }

@@ -1,9 +1,4 @@
-import {
-  CordonError,
-  PolicyBlocked,
-  ApprovalTimeout,
-  RateLimited,
-} from "./errors.ts";
+import { ApprovalTimeout, CordonError, PolicyBlocked, RateLimited } from "./errors.ts";
 
 export interface CordonClientOptions {
   /** Root URL of the Cordon gateway, e.g. "http://localhost:8000" */
@@ -80,12 +75,12 @@ export class CordonClient {
         signal: AbortSignal.timeout(this.fetchTimeout),
       });
 
-      const body = await res.json() as JsonRpcResponse;
+      const body = (await res.json()) as JsonRpcResponse;
 
       if (body.result !== undefined) return body.result;
 
       const code = body.error?.code;
-      const msg  = body.error?.message ?? "";
+      const msg = body.error?.message ?? "";
 
       if (code === -32001) throw new PolicyBlocked(toolName, msg);
 

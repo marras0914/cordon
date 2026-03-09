@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from "vitest";
+import { describe, expect, test } from "vitest";
 import { vi } from "vitest";
 
 // Force PII on for all tests
@@ -55,20 +55,20 @@ describe("PII redaction — strings", () => {
 describe("PII redaction — objects", () => {
   test("redacts nested string values", () => {
     const result = redact({ user: "admin@corp.com", note: "safe" }) as Record<string, unknown>;
-    expect(result["user"]).toContain("[REDACTED_EMAIL]");
-    expect(result["note"]).toBe("safe");
+    expect(result.user).toContain("[REDACTED_EMAIL]");
+    expect(result.note).toBe("safe");
   });
 
   test("redacts deeply nested values", () => {
     const result = redact({ a: { b: { c: "123-45-6789" } } }) as Record<string, unknown>;
-    const inner = (result["a"] as Record<string, unknown>)["b"] as Record<string, unknown>;
-    expect(inner["c"]).toContain("[REDACTED_SSN]");
+    const inner = (result.a as Record<string, unknown>).b as Record<string, unknown>;
+    expect(inner.c).toContain("[REDACTED_SSN]");
   });
 
   test("preserves non-string values", () => {
     const result = redact({ count: 42, flag: true }) as Record<string, unknown>;
-    expect(result["count"]).toBe(42);
-    expect(result["flag"]).toBe(true);
+    expect(result.count).toBe(42);
+    expect(result.flag).toBe(true);
   });
 });
 

@@ -1,11 +1,11 @@
-import { Hono } from "hono";
-import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { readFileSync, writeFileSync } from "node:fs";
+import { Hono } from "hono";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import yaml from "js-yaml";
+import { config } from "../config.ts";
 import * as db from "../db.ts";
 import * as auth from "./auth.ts";
-import { config } from "../config.ts";
-import { layout, nav } from "./views.ts";
+import { layout } from "./views.ts";
 
 export const dashboard = new Hono();
 
@@ -43,7 +43,9 @@ dashboard.get("/", async (c) => {
   const total = await db.getLogCount();
   const user = c.get("user") as auth.SessionUser | null;
 
-  const rows = logs.map((r) => `
+  const rows = logs
+    .map(
+      (r) => `
     <tr>
       <td>${r.timestamp?.slice(0, 19).replace("T", " ")}</td>
       <td><code>${r.tool_name ?? "—"}</code></td>
@@ -51,7 +53,9 @@ dashboard.get("/", async (c) => {
       <td>${r.reason ?? ""}</td>
       <td>${r.client_ip ?? ""}</td>
       <td>${r.user_email ?? ""}</td>
-    </tr>`).join("");
+    </tr>`,
+    )
+    .join("");
 
   const body = `
     <h2>Audit Log <small>(${total} total)</small></h2>
@@ -74,7 +78,9 @@ dashboard.get("/approvals", async (c) => {
   const history = await db.getAllApprovals(20);
   const user = c.get("user") as auth.SessionUser | null;
 
-  const pendingRows = pending.map((r) => `
+  const pendingRows = pending
+    .map(
+      (r) => `
     <tr>
       <td>${r.timestamp.slice(0, 19).replace("T", " ")}</td>
       <td><code>${r.tool_name}</code></td>
@@ -89,17 +95,22 @@ dashboard.get("/approvals", async (c) => {
           <button type="submit" class="btn-reject">Reject</button>
         </form>
       </td>
-    </tr>`).join("");
+    </tr>`,
+    )
+    .join("");
 
   const historyRows = history
     .filter((r) => r.status !== "PENDING")
-    .map((r) => `
+    .map(
+      (r) => `
       <tr>
         <td>${r.resolved_at?.slice(0, 19).replace("T", " ") ?? "—"}</td>
         <td><code>${r.tool_name}</code></td>
         <td><span class="badge badge-${r.status.toLowerCase()}">${r.status}</span></td>
         <td>${r.resolved_by ?? ""}</td>
-      </tr>`).join("");
+      </tr>`,
+    )
+    .join("");
 
   const body = `
     <h2>Pending Approvals (${pending.length})</h2>
@@ -118,7 +129,7 @@ dashboard.get("/approvals", async (c) => {
 
 dashboard.post("/approvals/:id/resolve", async (c) => {
   const { id } = c.req.param();
-  const { status } = await c.req.parseBody() as { status: "APPROVED" | "REJECTED" };
+  const { status } = (await c.req.parseBody()) as { status: "APPROVED" | "REJECTED" };
   const user = c.get("user") as auth.SessionUser | null;
   await db.resolveApproval(id, status, user?.email);
   return c.redirect("/dashboard/approvals", 302);
@@ -140,7 +151,7 @@ dashboard.get("/policy", (c) => {
 });
 
 dashboard.post("/policy", async (c) => {
-  const { policy: raw } = await c.req.parseBody() as { policy: string };
+  const { policy: raw } = (await c.req.parseBody()) as { policy: string };
   try {
     yaml.load(raw); // validate
     writeFileSync("policy.yaml", raw, "utf8");
@@ -160,20 +171,36 @@ dashboard.post("/policy", async (c) => {
 
 // ---------- NERC CIP export ----------
 
-const NERC_FIELDS = ["id", "timestamp", "tool_name", "method", "action", "reason", "request_id", "client_ip", "user_email"] as const;
+const NERC_FIELDS = [
+  "id",
+  "timestamp",
+  "tool_name",
+  "method",
+  "action",
+  "reason",
+  "request_id",
+  "client_ip",
+  "user_email",
+] as const;
 
 dashboard.get("/export/audit", async (c) => {
   const format = c.req.query("format") ?? "csv";
-  const start  = c.req.query("start") || undefined;
-  const end    = c.req.query("end")   || undefined;
-  const rows   = await db.getLogsFiltered({ start, end, limit: 100_000 });
-  const now    = new Date().toISOString().slice(0, 19) + "Z";
+  const start = c.req.query("start") || undefined;
+  const end = c.req.query("end") || undefined;
+  const rows = await db.getLogsFiltered({ start, end, limit: 100_000 });
+  const now = `${new Date().toISOString().slice(0, 19)}Z`;
   const period = `${start ?? "beginning"} to ${end ?? "present"}`;
-  const date   = now.slice(0, 10);
+  const date = now.slice(0, 10);
 
   if (format === "json") {
     const payload = {
-      meta: { standard: "NERC CIP-007-6 R6 / CIP-005-7 R2", system: "Cordon MCP Security Gateway", generated: now, period, record_count: rows.length },
+      meta: {
+        standard: "NERC CIP-007-6 R6 / CIP-005-7 R2",
+        system: "Cordon MCP Security Gateway",
+        generated: now,
+        period,
+        record_count: rows.length,
+      },
       records: rows,
     };
     return new Response(JSON.stringify(payload, null, 2), {
@@ -185,8 +212,8 @@ dashboard.get("/export/audit", async (c) => {
   }
 
   const lines = [
-    `# NERC CIP-007-6 R6 / CIP-005-7 R2 Audit Export`,
-    `# System: Cordon MCP Security Gateway`,
+    "# NERC CIP-007-6 R6 / CIP-005-7 R2 Audit Export",
+    "# System: Cordon MCP Security Gateway",
     `# Generated: ${now}`,
     `# Period: ${period}`,
     `# Record count: ${rows.length}`,
@@ -236,7 +263,7 @@ dashboard.get("/login", (c) => {
 });
 
 dashboard.post("/login", async (c) => {
-  const { key } = await c.req.parseBody() as { key: string };
+  const { key } = (await c.req.parseBody()) as { key: string };
   if (key === config.CORDON_DASHBOARD_KEY) {
     setCookie(c, auth.SESSION_COOKIE, key, { httpOnly: true, sameSite: "Lax", path: "/" });
     return c.redirect("/dashboard/", 302);
@@ -259,20 +286,28 @@ dashboard.get("/auth/login", async (c) => {
 });
 
 dashboard.get("/auth/callback", async (c) => {
-  const code  = c.req.query("code") ?? "";
+  const code = c.req.query("code") ?? "";
   const state = c.req.query("state") ?? "";
-  const raw   = getCookie(c, auth.STATE_COOKIE) ?? "";
+  const raw = getCookie(c, auth.STATE_COOKIE) ?? "";
 
   let parsed: { state: string; verifier: string };
-  try { parsed = JSON.parse(decodeURIComponent(raw)); }
-  catch { return c.text("Invalid state cookie", 400); }
+  try {
+    parsed = JSON.parse(decodeURIComponent(raw));
+  } catch {
+    return c.text("Invalid state cookie", 400);
+  }
 
   if (parsed.state !== state) return c.text("State mismatch", 400);
 
   try {
     const user = await auth.exchangeCode(code, parsed.verifier);
     const token = await auth.createSession(user);
-    setCookie(c, auth.SESSION_COOKIE, token, { httpOnly: true, sameSite: "Lax", path: "/", maxAge: 8 * 3600 });
+    setCookie(c, auth.SESSION_COOKIE, token, {
+      httpOnly: true,
+      sameSite: "Lax",
+      path: "/",
+      maxAge: 8 * 3600,
+    });
     deleteCookie(c, auth.STATE_COOKIE, { path: "/" });
     return c.redirect("/dashboard/", 302);
   } catch (err) {

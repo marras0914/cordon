@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { config } from "./config.ts";
+import { dashboard } from "./dashboard/index.ts";
 import { initDb } from "./db.ts";
 import { proxy } from "./proxy.ts";
-import { dashboard } from "./dashboard/index.ts";
 
 await initDb();
 
