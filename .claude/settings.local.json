@@ -6,7 +6,21 @@
       "Bash(pip install:*)",
       "Bash(netstat:*)",
       "Bash(curl:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(bun:*)",
+      "Bash(where bun)",
+      "Read(//c/Users/marras/.bun/**)",
+      "Bash(node --version)",
+      "Bash(npm install:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npm test:*)",
+      "Bash(sed:*)",
+      "Bash(npx tsc:*)",
+      "Bash(gh run:*)",
+      "Bash(npx:*)",
+      "Bash(rm:*)",
+      "Bash(cp:*)",
+      "Bash(mkdir:*)"
     ]
   }
 }

@@ -1,0 +1,23 @@
+services:
+  gateway:
+    build:
+      context: packages/gateway
+    ports:
+      - "8000:8000"
+    environment:
+      REAL_MCP_SERVER: http://mock-server:8001
+      CORDON_RATE_LIMIT: "60"
+      CORDON_REDACT_PII: "true"
+    volumes:
+      - cordon-data:/app/data
+    depends_on:
+      - mock-server
+
+  # Minimal echo server for local dev — replace with your real MCP server
+  mock-server:
+    image: ealen/echo-server:latest
+    ports:
+      - "8001:80"
+
+volumes:
+  cordon-data:

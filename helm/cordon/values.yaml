@@ -4,7 +4,7 @@
 # ---------- gateway ----------
 gateway:
   image:
-    repository: your-registry/cordon-gateway
+    repository: ghcr.io/marras0914/cordon-gateway
     tag: "0.1.0"
     pullPolicy: IfNotPresent
 

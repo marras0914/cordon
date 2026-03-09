@@ -5,7 +5,7 @@ Deploys the Cordon MCP Security Gateway with an optional OPA sidecar.
 ## Install
 
 ```bash
-helm repo add cordon https://YOUR_ORG.github.io/cordon
+helm repo add cordon https://marras0914.github.io/cordon
 helm install cordon cordon/cordon \
   --set gateway.realMcpServer=http://your-mcp-server:8001 \
   --set auth.dashboardKey=changeme \

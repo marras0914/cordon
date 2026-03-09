@@ -19,21 +19,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: TS tests
+      - name: Install and test
         run: |
           npm install --prefix packages/sdk
           npm test --prefix packages/sdk
           npm install --prefix packages/gateway
           npm test --prefix packages/gateway
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - name: Python gateway tests
-        run: |
-          cd cordon_gateway
-          pip install -r requirements.txt pytest
-          python -m pytest tests/ -q
 
   # ── 2. Docker image → GHCR ───────────────────────────────────────────────
   docker:
@@ -67,7 +58,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ./cordon_gateway
+          context: ./packages/gateway
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -78,7 +69,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      id-token: write   # npm provenance
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -96,13 +87,13 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  # ── 4. Helm chart → GitHub Pages (ArtifactHub) ───────────────────────────
+  # ── 4. Helm chart → GitHub Pages ─────────────────────────────────────────
   helm:
     name: Package and publish Helm chart
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # push to gh-pages branch
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -111,18 +102,14 @@ jobs:
 
       - uses: azure/setup-helm@v4
 
-      - name: Package chart
-        run: |
-          helm package cordon_gateway/helm/cordon --destination /tmp/helm-dist
-
       - name: Publish chart to gh-pages
         uses: helm/chart-releaser-action@v1.6.0
         with:
-          charts_dir: cordon_gateway/helm
+          charts_dir: helm
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ── 5. GitHub Release + source zip ───────────────────────────────────────
+  # ── 5. GitHub Release ─────────────────────────────────────────────────────
   github-release:
     name: Create GitHub Release
     needs: [docker, npm, helm]
@@ -133,17 +120,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Build distribution zip
-        run: python build_cordon.py --output dist/
-
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: dist/cordon_gateway_*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -7,8 +7,8 @@ on:
     branches: ["main", "master"]
 
 jobs:
-  test-ts:
-    name: Test TS packages
+  test:
+    name: Test (${{ matrix.node-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -23,10 +23,11 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
 
-      - name: Install dependencies
-        run: |
-          npm install --prefix packages/sdk
-          npm install --prefix packages/gateway
+      - name: Install SDK deps
+        run: npm install --prefix packages/sdk
+
+      - name: Install gateway deps
+        run: npm install --prefix packages/gateway
 
       - name: Run SDK tests
         run: npm test --prefix packages/sdk
@@ -37,23 +38,8 @@ jobs:
       - name: Typecheck SDK
         run: npx tsc --project packages/sdk/tsconfig.json --noEmit
 
-  test-python:
-    name: Test Python gateway (legacy)
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: |
-          cd cordon_gateway
-          pip install -r requirements.txt pytest
-          python -m pytest tests/ -q --tb=short
-
   lint:
-    name: Biome lint + format check
+    name: Biome lint + format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,4 +56,4 @@ jobs:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
       - name: Lint Helm chart
-        run: helm lint cordon_gateway/helm/cordon
+        run: helm lint helm/cordon
