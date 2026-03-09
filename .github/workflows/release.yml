@@ -83,7 +83,7 @@ jobs:
           cd packages/sdk
           npm install
           npm run build
-          npm publish --provenance --access public
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
