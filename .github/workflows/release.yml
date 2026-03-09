@@ -16,11 +16,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: TS tests
+        run: |
+          npm install --prefix packages/sdk
+          npm test --prefix packages/sdk
+          npm install --prefix packages/gateway
+          npm test --prefix packages/gateway
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-      - run: |
+      - name: Python gateway tests
+        run: |
           cd cordon_gateway
           pip install -r requirements.txt pytest
           python -m pytest tests/ -q
@@ -62,29 +72,29 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  # ── 3. SDK → PyPI ────────────────────────────────────────────────────────
-  pypi:
-    name: Publish SDK to PyPI
+  # ── 3. SDK → npm ─────────────────────────────────────────────────────────
+  npm:
+    name: Publish SDK to npm
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      id-token: write   # OIDC trusted publishing
+      id-token: write   # npm provenance
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.12"
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
 
-      - name: Build SDK package
+      - name: Install, build, and publish
         run: |
-          pip install build
-          python -m build cordon_gateway/sdk_package/
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: cordon_gateway/sdk_package/dist/
+          cd packages/sdk
+          npm install
+          npm run build
+          npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   # ── 4. Helm chart → GitHub Pages (ArtifactHub) ───────────────────────────
   helm:
@@ -115,7 +125,7 @@ jobs:
   # ── 5. GitHub Release + source zip ───────────────────────────────────────
   github-release:
     name: Create GitHub Release
-    needs: [docker, pypi, helm]
+    needs: [docker, npm, helm]
     runs-on: ubuntu-latest
     permissions:
       contents: write

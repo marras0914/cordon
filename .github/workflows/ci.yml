@@ -7,47 +7,61 @@ on:
     branches: ["main", "master"]
 
 jobs:
-  test:
-    name: Test (Python ${{ matrix.python-version }})
+  test-ts:
+    name: Test TS packages
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
+        node-version: ["20", "22"]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
+          node-version: ${{ matrix.node-version }}
+          cache: npm
 
       - name: Install dependencies
         run: |
-          cd cordon_gateway
-          pip install -r requirements.txt
-          pip install pytest pytest-anyio
+          npm install --prefix packages/sdk
+          npm install --prefix packages/gateway
 
-      - name: Run tests
-        run: |
-          cd cordon_gateway
-          python -m pytest tests/ -v --tb=short
+      - name: Run SDK tests
+        run: npm test --prefix packages/sdk
 
-  lint:
-    name: Syntax check
+      - name: Run gateway tests
+        run: npm test --prefix packages/gateway
+
+      - name: Typecheck SDK
+        run: npx tsc --project packages/sdk/tsconfig.json --noEmit
+
+  test-python:
+    name: Test Python gateway (legacy)
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Check syntax
-        run: |
+          cache: pip
+      - run: |
           cd cordon_gateway
-          python -m py_compile main.py db.py dashboard.py auth.py pii.py \
-            ratelimit.py alerting.py cordon_sdk.py
-          echo "All files OK"
+          pip install -r requirements.txt pytest
+          python -m pytest tests/ -q --tb=short
+
+  lint:
+    name: Biome lint + format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install -g @biomejs/biome
+      - run: biome ci .
 
   helm-lint:
     name: Helm lint
