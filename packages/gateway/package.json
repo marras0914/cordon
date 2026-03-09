@@ -1,0 +1,26 @@
+{
+  "name": "@cordon/gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev":   "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --target bun --outdir dist",
+    "test":  "vitest run test/"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.36.4",
+    "hono": "^4.6.12",
+    "iron-session": "^8.0.3",
+    "jose": "^5.9.6",
+    "js-yaml": "^4.1.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "drizzle-kit": "^0.28.1",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.18"
+  }
+}

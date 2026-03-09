@@ -1,3 +1,10 @@
+# Node / TypeScript
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+package-lock.json
+
 # Python
 __pycache__/
 *.py[cod]
