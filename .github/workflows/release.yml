@@ -85,7 +85,7 @@ jobs:
           npm run build
           npm publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.cordon }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   # ── 4. Helm chart → GitHub Pages ─────────────────────────────────────────
   helm:
