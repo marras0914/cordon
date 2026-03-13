@@ -1,5 +1,5 @@
 {
-  "name": "@cordon/core",
+  "name": "@getcordon/core",
   "version": "0.1.0",
   "description": "Core proxy engine for Cordon — the security gateway for AI agents",
   "author": "marras0914",

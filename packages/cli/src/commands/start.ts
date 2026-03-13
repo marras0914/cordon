@@ -1,4 +1,4 @@
-import { CordonGateway } from '@cordon/core';
+import { CordonGateway } from '@getcordon/core';
 import { findConfigPath, loadConfig } from '../config-loader.js';
 
 interface StartOptions {
