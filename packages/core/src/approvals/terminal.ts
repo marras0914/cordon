@@ -44,9 +44,11 @@ export class TerminalApprovalChannel {
               }, ctx.timeoutMs)
             : null;
 
+        let answered = false;
+
         rl.once('line', (line) => {
+          answered = true;
           if (timeoutHandle) clearTimeout(timeoutHandle);
-          rl.close();
 
           const input = line.trim().toLowerCase();
           if (input === 'a' || input === 'approve' || input === 'yes' || input === 'y') {
@@ -56,12 +58,15 @@ export class TerminalApprovalChannel {
             process.stderr.write('  \x1b[31mDenied.\x1b[0m\n\n');
             resolve({ approved: false, reason: 'Denied by operator' });
           }
+          rl.close();
         });
 
-        // If the TTY closes without input, deny
+        // If the TTY closes without input (e.g. piped input exhausted), deny
         rl.once('close', () => {
-          if (timeoutHandle) clearTimeout(timeoutHandle);
-          resolve({ approved: false, reason: 'TTY closed before response' });
+          if (!answered) {
+            if (timeoutHandle) clearTimeout(timeoutHandle);
+            resolve({ approved: false, reason: 'TTY closed before response' });
+          }
         });
       } catch (err) {
         // If we can't open a TTY (e.g. running in CI with no terminal), auto-deny
