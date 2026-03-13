@@ -1,6 +1,6 @@
 {
   "name": "@getcordon/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Core proxy engine for Cordon — the security gateway for AI agents",
   "author": "marras0914",
   "license": "MIT",
@@ -13,7 +13,16 @@
   "bugs": {
     "url": "https://github.com/marras0914/cordon/issues"
   },
-  "keywords": ["mcp", "security", "gateway", "proxy", "ai", "llm", "policy", "cordon"],
+  "keywords": [
+    "mcp",
+    "security",
+    "gateway",
+    "proxy",
+    "ai",
+    "llm",
+    "policy",
+    "cordon"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -23,7 +32,9 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
