@@ -1,5 +1,5 @@
-import { createInterface } from 'node:readline';
-import { openSync, createReadStream, createWriteStream } from 'node:fs';
+import { createInterface, Interface } from 'node:readline';
+import { createReadStream } from 'node:fs';
 import type { ApprovalContext, ApprovalResult } from './manager.js';
 
 /**
@@ -10,7 +10,39 @@ import type { ApprovalContext, ApprovalResult } from './manager.js';
  * We must:
  *   - Write prompts to process.stderr
  *   - Read input directly from the TTY device (/dev/tty on Unix, \\.\CONIN$ on Windows)
+ *
+ * A singleton readline interface is used so that \\.\CONIN$ is only opened
+ * once per process — re-opening it on Windows causes subsequent reads to
+ * get immediate EOF.
  */
+
+// Singleton readline interface — created lazily, reused across all approval requests.
+let sharedRl: Interface | null = null;
+const lineResolvers: Array<(line: string) => void> = [];
+
+function getSharedRl(): Interface {
+  if (sharedRl) return sharedRl;
+
+  const ttyPath = process.platform === 'win32' ? '\\\\.\\CONIN$' : '/dev/tty';
+  const stream = createReadStream(ttyPath);
+  sharedRl = createInterface({ input: stream, terminal: false });
+
+  sharedRl.on('line', (line) => {
+    const resolver = lineResolvers.shift();
+    if (resolver) resolver(line);
+  });
+
+  sharedRl.on('close', () => {
+    sharedRl = null;
+    // Drain any waiting resolvers with an empty line (will be treated as deny)
+    for (const resolver of lineResolvers.splice(0)) {
+      resolver('');
+    }
+  });
+
+  return sharedRl;
+}
+
 export class TerminalApprovalChannel {
   async request(ctx: ApprovalContext): Promise<ApprovalResult> {
     const argsDisplay = JSON.stringify(ctx.args, null, 2)
@@ -30,64 +62,47 @@ export class TerminalApprovalChannel {
     );
 
     return new Promise((resolve) => {
+      let settled = false;
+
+      const lineResolver = (line: string) => {
+        if (settled) return;
+        settled = true;
+        if (timeoutHandle) clearTimeout(timeoutHandle);
+
+        const input = line.trim().toLowerCase();
+        if (input === 'a' || input === 'approve' || input === 'yes' || input === 'y') {
+          process.stderr.write('  \x1b[32mApproved.\x1b[0m\n\n');
+          resolve({ approved: true });
+        } else {
+          process.stderr.write('  \x1b[31mDenied.\x1b[0m\n\n');
+          resolve({ approved: false, reason: 'Denied by operator' });
+        }
+      };
+
+      const timeoutHandle =
+        ctx.timeoutMs !== undefined
+          ? setTimeout(() => {
+              if (settled) return;
+              settled = true;
+              const idx = lineResolvers.indexOf(lineResolver);
+              if (idx !== -1) lineResolvers.splice(idx, 1);
+              process.stderr.write('\n  \x1b[31mAuto-denied: approval timeout\x1b[0m\n\n');
+              resolve({ approved: false, reason: 'Approval timed out' });
+            }, ctx.timeoutMs)
+          : null;
+
       try {
-        const ttyInput = openTtyInput();
-        const rl = createInterface({ input: ttyInput, terminal: false });
-
-        // Auto-deny on timeout if configured
-        const timeoutHandle =
-          ctx.timeoutMs !== undefined
-            ? setTimeout(() => {
-                rl.close();
-                process.stderr.write('\n  \x1b[31mAuto-denied: approval timeout\x1b[0m\n\n');
-                resolve({ approved: false, reason: 'Approval timed out' });
-              }, ctx.timeoutMs)
-            : null;
-
-        let answered = false;
-
-        rl.once('line', (line) => {
-          answered = true;
-          if (timeoutHandle) clearTimeout(timeoutHandle);
-
-          const input = line.trim().toLowerCase();
-          if (input === 'a' || input === 'approve' || input === 'yes' || input === 'y') {
-            process.stderr.write('  \x1b[32mApproved.\x1b[0m\n\n');
-            resolve({ approved: true });
-          } else {
-            process.stderr.write('  \x1b[31mDenied.\x1b[0m\n\n');
-            resolve({ approved: false, reason: 'Denied by operator' });
-          }
-          rl.close();
-        });
-
-        // If the TTY closes without input (e.g. piped input exhausted), deny
-        rl.once('close', () => {
-          if (!answered) {
-            if (timeoutHandle) clearTimeout(timeoutHandle);
-            resolve({ approved: false, reason: 'TTY closed before response' });
-          }
-        });
-      } catch (err) {
-        // If we can't open a TTY (e.g. running in CI with no terminal), auto-deny
+        lineResolvers.push(lineResolver);
+        getSharedRl(); // ensure the interface is running
+      } catch {
+        lineResolvers.splice(lineResolvers.indexOf(lineResolver), 1);
+        settled = true;
+        if (timeoutHandle) clearTimeout(timeoutHandle);
         process.stderr.write(
           `  \x1b[31mWarning: no TTY available for approval — auto-denying.\x1b[0m\n`,
         );
         resolve({ approved: false, reason: 'No TTY available for approval' });
       }
     });
-  }
-}
-
-/**
- * Opens the real TTY device for reading, bypassing stdin which is owned by
- * the MCP transport. Platform-aware.
- */
-function openTtyInput(): NodeJS.ReadableStream {
-  const ttyPath = process.platform === 'win32' ? '\\\\.\\CONIN$' : '/dev/tty';
-  try {
-    return createReadStream(ttyPath);
-  } catch {
-    throw new Error(`Cannot open TTY at ${ttyPath}`);
   }
 }
