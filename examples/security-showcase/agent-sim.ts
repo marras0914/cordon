@@ -42,7 +42,7 @@ const STEPS = [
   },
   {
     label: 'Running a SELECT query',
-    note: 'read — should pass through automatically',
+    note: 'execute_ prefix triggers approval even for reads — Cordon errs on the side of caution',
     tool: 'execute_sql',
     args: { query: 'SELECT id, email FROM users WHERE active = true LIMIT 50' },
   },
