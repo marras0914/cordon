@@ -1,6 +1,19 @@
 {
   "name": "cordon-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "description": "TypeScript config SDK for Cordon — the security gateway for AI agents",
+  "author": "marras0914",
+  "license": "MIT",
+  "homepage": "https://github.com/marras0914/cordon",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marras0914/cordon.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/marras0914/cordon/issues"
+  },
+  "keywords": ["mcp", "security", "gateway", "ai", "llm", "policy", "cordon"],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -10,6 +23,7 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "files": ["dist"],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch"
