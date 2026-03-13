@@ -30,7 +30,7 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
-    "@cordon/core": "*",
+    "@getcordon/core": "*",
     "cordon-sdk": "*",
     "commander": "^12.1.0",
     "jiti": "^2.4.0"

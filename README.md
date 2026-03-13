@@ -266,7 +266,7 @@ Policies can be set at the server level (default for all tools) or per-tool (ove
 |---|---|
 | `cordon-cli` | The CLI — `npx cordon-cli start` |
 | `cordon-sdk` | TypeScript config SDK — `defineConfig()` and all types |
-| `@cordon/core` | Core proxy engine — policy evaluator, audit logger, approval manager |
+| `@getcordon/core` | Core proxy engine — policy evaluator, audit logger, approval manager |
 
 ---
 

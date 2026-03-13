@@ -7,7 +7,7 @@ Security gateway for AI agents. Sits between the LLM client (Claude Desktop, Cur
 ```
 packages/
   sdk/    cordon-sdk       — defineConfig() helper + all TypeScript types (no runtime deps)
-  core/   @cordon/core     — proxy engine: gateway, policy, approvals, audit, upstream manager
+  core/   @getcordon/core     — proxy engine: gateway, policy, approvals, audit, upstream manager
   cli/    cordon-cli       — CLI commands: `cordon start`, `cordon init`
 
 examples/
@@ -125,7 +125,7 @@ GitHub repo: `github.com/marras0914/cordon`
 Package status:
 - `cordon-sdk` — published at 0.1.0 (placeholder), bumped to 0.1.1 locally, needs `npm login` + publish
 - `cordon-cli` — not yet published, name is available
-- `@cordon/core` — not yet published, name is available (needs `@cordon` npm org or rename to `cordon-core`)
+- `@getcordon/core` — not yet published, name is available (needs `@cordon` npm org or rename to `cordon-core`)
 
 To publish after `npm login`:
 ```bash
