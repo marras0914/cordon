@@ -1,0 +1,29 @@
+{
+  "name": "cordon-cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "cordon": "./dist/bin/cordon.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "@cordon/core": "*",
+    "cordon-sdk": "*",
+    "commander": "^12.1.0",
+    "jiti": "^2.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "tsup": "^8.3.0"
+  }
+}

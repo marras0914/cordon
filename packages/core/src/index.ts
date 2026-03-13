@@ -1,0 +1,10 @@
+export { CordonGateway } from './gateway.js';
+export { AuditLogger } from './audit/logger.js';
+export { PolicyEngine } from './policies/engine.js';
+export { ApprovalManager } from './approvals/manager.js';
+export { UpstreamManager } from './proxy/upstream-manager.js';
+export { Interceptor } from './proxy/interceptor.js';
+export type { AuditEntry, AuditEventType } from './audit/logger.js';
+export type { PolicyDecision } from './policies/engine.js';
+export type { ApprovalContext, ApprovalResult } from './approvals/manager.js';
+export type { ToolWithOrigin, ToolCallResponse } from './proxy/upstream-manager.js';
