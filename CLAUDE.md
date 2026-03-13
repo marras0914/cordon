@@ -9,21 +9,35 @@ packages/
   sdk/    cordon-sdk       — defineConfig() helper + all TypeScript types (no runtime deps)
   core/   @cordon/core     — proxy engine: gateway, policy, approvals, audit, upstream manager
   cli/    cordon-cli       — CLI commands: `cordon start`, `cordon init`
+
+examples/
+  security-showcase/       — interactive demo + block-test.ts integration tests (5/5 passing)
 ```
 
-Planning docs live in the parent directory (`../`) alongside the code.
+Planning docs live in the parent directory (`../cordon-deux/`) alongside the code.
 
 ## Commands
 
 ```bash
 npm install          # install all workspace deps
-npm run build        # build all packages via turbo (respects dependency order)
+npm run build        # build all packages via turbo (respects dependency order: sdk → core → cli)
 npm run dev          # watch mode for all packages
 ```
 
 Building a single package:
 ```bash
 cd packages/core && npm run build
+```
+
+Running the integration test:
+```bash
+cd examples/security-showcase && npx tsx block-test.ts
+```
+
+Running the interactive demo:
+```bash
+cd examples/security-showcase && npm run demo
+# When the approval prompt appears, type A to approve or D to deny
 ```
 
 ## Architecture
@@ -35,7 +49,7 @@ Claude Desktop ──stdio──▶ CordonGateway ──stdio──▶ [MCP serv
                                          ──stdio──▶ [MCP server B]
 ```
 
-**Critical**: `process.stdin` and `process.stdout` are owned by the MCP transport. All logging and approval UI must write to `process.stderr`. The terminal approval channel reads from `/dev/tty` (Unix) or `\\.\CONIN$` (Windows) directly.
+**Critical**: `process.stdin` and `process.stdout` are owned by the MCP transport. All logging and approval UI must write to `process.stderr`. The terminal approval channel reads from `/dev/tty` (Unix) or `\\.\CONIN$` (Windows) directly — NOT from stdin.
 
 ## Key Files
 
@@ -49,6 +63,9 @@ Claude Desktop ──stdio──▶ CordonGateway ──stdio──▶ [MCP serv
 | `packages/core/src/audit/logger.ts` | Structured JSON audit log to stderr or file |
 | `packages/cli/src/commands/init.ts` | Reads claude_desktop_config.json, generates cordon.config.ts, patches Claude Desktop |
 | `packages/cli/src/config-loader.ts` | Loads cordon.config.ts at runtime via jiti (no separate compile step) |
+| `examples/security-showcase/dangerous-server.ts` | Mock MCP server used in demo |
+| `examples/security-showcase/agent-sim.ts` | Interactive demo — simulates agent making tool calls |
+| `examples/security-showcase/block-test.ts` | Non-interactive integration test |
 
 ## Policy Actions
 
@@ -82,6 +99,9 @@ export default defineConfig({
       command: 'npx',
       args: ['-y', '@my-org/db-mcp'],
       policy: 'approve-writes',
+      tools: {
+        drop_table: { action: 'block', reason: 'Use a migration script instead' },
+      },
     },
   ],
   audit: { enabled: true, output: 'stdout' },
@@ -95,6 +115,25 @@ Using `@modelcontextprotocol/sdk` v1.11.x (stable). The v2 alpha splits into `@m
 
 `client.callTool()` returns a union type (includes a `CompatibilityCallToolResult` variant with `toolResult` instead of `content`). We use `Awaited<ReturnType<Client['callTool']>>` as the type alias (`ToolCallResponse`) rather than the named `CallToolResult` to avoid type narrowing issues.
 
+`transport.stderr` is null before `client.connect()` is called. Pipe it after connect, not before.
+
+## Publishing
+
+npm username: `marras0914`
+GitHub repo: `github.com/marras0914/cordon`
+
+Package status:
+- `cordon-sdk` — published at 0.1.0 (placeholder), bumped to 0.1.1 locally, needs `npm login` + publish
+- `cordon-cli` — not yet published, name is available
+- `@cordon/core` — not yet published, name is available (needs `@cordon` npm org or rename to `cordon-core`)
+
+To publish after `npm login`:
+```bash
+cd packages/sdk  && npm run build && npm publish --access public
+cd packages/core && npm run build && npm publish --access public
+cd packages/cli  && npm run build && npm publish --access public
+```
+
 ## What's Not Built Yet (v1 deferred)
 
 - HTTP/SSE transport (stdio only for now)
@@ -104,3 +143,10 @@ Using `@modelcontextprotocol/sdk` v1.11.x (stable). The v2 alpha splits into `@m
 - OTLP audit output
 - Dynamic policy reload (requires restart)
 - Tool argument-level policies
+
+## Month 2 Targets (next big milestone)
+
+- Hosted receiver for Slack/mobile approvals
+- Web UI — audit log history viewer
+- User auth (GitHub OAuth)
+- Read-only mode toggle in dashboard
