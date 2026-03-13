@@ -1,6 +1,19 @@
 {
   "name": "cordon-cli",
   "version": "0.1.0",
+  "description": "The security gateway for AI agents — firewall, auditor, and remote control for MCP tool calls",
+  "author": "marras0914",
+  "license": "MIT",
+  "homepage": "https://github.com/marras0914/cordon",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marras0914/cordon.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/marras0914/cordon/issues"
+  },
+  "keywords": ["mcp", "security", "gateway", "cli", "ai", "llm", "policy", "cordon"],
   "type": "module",
   "bin": {
     "cordon": "./dist/bin/cordon.js"
@@ -11,6 +24,7 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "files": ["dist"],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch"

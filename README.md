@@ -15,8 +15,8 @@
 
 <p align="center">
   <img src="https://img.shields.io/npm/v/cordon-cli?style=flat-square&color=blue" alt="npm version" />
-  <img src="https://img.shields.io/github/license/YOUR_USERNAME/cordon?style=flat-square" alt="license" />
-  <img src="https://img.shields.io/github/stars/YOUR_USERNAME/cordon?style=flat-square" alt="stars" />
+  <img src="https://img.shields.io/github/license/marras0914/cordon?style=flat-square" alt="license" />
+  <img src="https://img.shields.io/github/stars/marras0914/cordon?style=flat-square" alt="stars" />
 </p>
 
 ---
@@ -314,7 +314,7 @@ npm run demo
 Cordon is open source and we welcome contributions.
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/cordon.git
+git clone https://github.com/marras0914/cordon.git
 cd cordon
 npm install
 npm run build
@@ -332,5 +332,5 @@ MIT — see [LICENSE](./LICENSE) for details.
 <p align="center">
   <strong>Stop trusting. Start governing.</strong>
   <br />
-  <a href="https://github.com/YOUR_USERNAME/cordon">⭐ Star on GitHub</a>
+  <a href="https://github.com/marras0914/cordon">⭐ Star on GitHub</a>
 </p>
