@@ -47,6 +47,53 @@ class StderrAuditOutput implements AuditOutput {
   }
 }
 
+class HostedAuditOutput implements AuditOutput {
+  private queue: AuditEntry[] = [];
+  private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly endpoint: string;
+  private readonly apiKey: string;
+  private readonly flushIntervalMs = 2000;
+  private readonly maxBatchSize = 100;
+
+  constructor(endpoint: string, apiKey: string) {
+    this.endpoint = endpoint.replace(/\/$/, '') + '/events';
+    this.apiKey = apiKey;
+  }
+
+  write(entry: AuditEntry): void {
+    this.queue.push(entry);
+    if (this.queue.length >= this.maxBatchSize) {
+      this.flush();
+    } else if (!this.flushTimer) {
+      this.flushTimer = setTimeout(() => this.flush(), this.flushIntervalMs);
+    }
+  }
+
+  private flush(): void {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
+    if (this.queue.length === 0) return;
+
+    const batch = this.queue.splice(0);
+    fetch(this.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Cordon-Key': this.apiKey,
+      },
+      body: JSON.stringify(batch),
+    }).catch((err) => {
+      process.stderr.write(`[cordon] hosted audit error: ${err.message}\n`);
+    });
+  }
+
+  close(): void {
+    this.flush();
+  }
+}
+
 class FileAuditOutput implements AuditOutput {
   private stream: WriteStream;
 
@@ -105,6 +152,16 @@ export class AuditLogger {
         return new StderrAuditOutput();
       case 'file':
         return new FileAuditOutput(config.filePath ?? './cordon-audit.log');
+      case 'hosted': {
+        const { endpoint, apiKey } = config;
+        if (!endpoint || !apiKey) {
+          process.stderr.write(
+            `[cordon] warn: audit output 'hosted' requires endpoint and apiKey — falling back to stdout\n`,
+          );
+          return new StderrAuditOutput();
+        }
+        return new HostedAuditOutput(endpoint, apiKey);
+      }
       case 'otlp':
       case 'webhook':
         // v2 — fall back to stderr for now

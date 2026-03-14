@@ -56,7 +56,7 @@ export interface ApprovalConfig {
 
 // ── Audit ─────────────────────────────────────────────────────────────────────
 
-export type AuditOutputType = 'stdout' | 'file' | 'otlp' | 'webhook';
+export type AuditOutputType = 'stdout' | 'file' | 'hosted' | 'otlp' | 'webhook';
 
 export interface AuditConfig {
   enabled: boolean;
@@ -66,6 +66,10 @@ export interface AuditConfig {
   filePath?: string;
   /** Endpoint when output includes 'webhook' or 'otlp'. */
   webhookUrl?: string;
+  /** Cordon hosted receiver URL. Required when output includes 'hosted'. */
+  endpoint?: string;
+  /** API key for the hosted receiver (X-Cordon-Key header). Required when output includes 'hosted'. */
+  apiKey?: string;
 }
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
