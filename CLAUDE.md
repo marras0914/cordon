@@ -56,13 +56,15 @@ Claude Desktop ──stdio──▶ CordonGateway ──stdio──▶ [MCP serv
 
 **Windows TTY**: `\\.\CONIN$` must be opened ONCE per process as a singleton readline interface. Re-opening it for each approval request causes subsequent reads to get immediate EOF. The shared readline in `terminal.ts` queues resolvers via `lineResolvers[]`.
 
+**Upstream disconnect handling**: `transport.onclose` in `UpstreamManager.connectServer()` removes the disconnected server from `this.clients` and purges its tools from `this.registry`. This prevents the LLM from being offered tools from a dead server. Also pipes upstream stderr so server logs are visible.
+
 ## Key Files
 
 | File | What it does |
 |------|-------------|
 | `packages/core/src/gateway.ts` | Entry point — wires everything together, registers MCP handlers |
 | `packages/core/src/proxy/interceptor.ts` | Hot path — every tools/call flows through here |
-| `packages/core/src/proxy/upstream-manager.ts` | Manages child MCP processes, tool registry, namespace collisions |
+| `packages/core/src/proxy/upstream-manager.ts` | Manages child MCP processes, tool registry, namespace collisions, stale tool cleanup on disconnect |
 | `packages/core/src/policies/engine.ts` | Evaluates allow/block/approve/read-only/approve-writes/log-only |
 | `packages/core/src/approvals/terminal.ts` | TTY-safe approval prompt (singleton readline) |
 | `packages/core/src/audit/logger.ts` | Structured JSON audit log to stderr or file |
