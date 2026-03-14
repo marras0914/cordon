@@ -6,12 +6,12 @@ Security gateway for AI agents. Sits between the LLM client (Claude Desktop, Cur
 
 ```
 packages/
-  sdk/    cordon-sdk       — defineConfig() helper + all TypeScript types (no runtime deps)
+  sdk/    cordon-sdk          — defineConfig() helper + all TypeScript types (no runtime deps)
   core/   @getcordon/core     — proxy engine: gateway, policy, approvals, audit, upstream manager
-  cli/    cordon-cli       — CLI commands: `cordon start`, `cordon init`
+  cli/    cordon-cli          — CLI commands: `cordon start`, `cordon init`
 
 examples/
-  security-showcase/       — interactive demo + block-test.ts integration tests (5/5 passing)
+  security-showcase/          — interactive demo + block-test.ts integration tests (5/5 passing)
 ```
 
 Planning docs live in the parent directory (`../cordon-deux/`) alongside the code.
@@ -22,6 +22,7 @@ Planning docs live in the parent directory (`../cordon-deux/`) alongside the cod
 npm install          # install all workspace deps
 npm run build        # build all packages via turbo (respects dependency order: sdk → core → cli)
 npm run dev          # watch mode for all packages
+npm test             # run unit tests (vitest, 36 tests in @getcordon/core)
 ```
 
 Building a single package:
@@ -29,9 +30,10 @@ Building a single package:
 cd packages/core && npm run build
 ```
 
-Running the integration test:
+Running tests:
 ```bash
-cd examples/security-showcase && npx tsx block-test.ts
+npm test                                                    # all unit tests via turbo
+cd examples/security-showcase && npx tsx block-test.ts     # integration test (5/5)
 ```
 
 Running the interactive demo:
@@ -51,6 +53,8 @@ Claude Desktop ──stdio──▶ CordonGateway ──stdio──▶ [MCP serv
 
 **Critical**: `process.stdin` and `process.stdout` are owned by the MCP transport. All logging and approval UI must write to `process.stderr`. The terminal approval channel reads from `/dev/tty` (Unix) or `\\.\CONIN$` (Windows) directly — NOT from stdin.
 
+**Windows TTY**: `\\.\CONIN$` must be opened ONCE per process as a singleton readline interface. Re-opening it for each approval request causes subsequent reads to get immediate EOF. The shared readline in `terminal.ts` queues resolvers via `lineResolvers[]`.
+
 ## Key Files
 
 | File | What it does |
@@ -59,8 +63,9 @@ Claude Desktop ──stdio──▶ CordonGateway ──stdio──▶ [MCP serv
 | `packages/core/src/proxy/interceptor.ts` | Hot path — every tools/call flows through here |
 | `packages/core/src/proxy/upstream-manager.ts` | Manages child MCP processes, tool registry, namespace collisions |
 | `packages/core/src/policies/engine.ts` | Evaluates allow/block/approve/read-only/approve-writes/log-only |
-| `packages/core/src/approvals/terminal.ts` | TTY-safe approval prompt |
+| `packages/core/src/approvals/terminal.ts` | TTY-safe approval prompt (singleton readline) |
 | `packages/core/src/audit/logger.ts` | Structured JSON audit log to stderr or file |
+| `packages/core/src/__tests__/` | Unit tests: policy-engine, audit-logger, interceptor (36 tests) |
 | `packages/cli/src/commands/init.ts` | Reads claude_desktop_config.json, generates cordon.config.ts, patches Claude Desktop |
 | `packages/cli/src/config-loader.ts` | Loads cordon.config.ts at runtime via jiti (no separate compile step) |
 | `examples/security-showcase/dangerous-server.ts` | Mock MCP server used in demo |
@@ -78,7 +83,7 @@ Claude Desktop ──stdio──▶ CordonGateway ──stdio──▶ [MCP serv
 | `read-only` | Block all write operations |
 | `log-only` | Pass through but flag in audit log |
 
-Write detection uses tool name prefixes: `write`, `create`, `update`, `delete`, `execute`, `drop`, `insert`, `run`, `push`, `deploy`, etc.
+Write detection uses tool name prefixes with `_` or `-` separator: `write_*`, `create_*`, `delete_*`, `execute_*`, `drop_*`, etc. Bare exact matches also count (tool named exactly `write`). Tools like `writer_notes` are NOT matched (no separator after prefix).
 
 ## Tool Namespace Collision Handling
 
@@ -121,17 +126,19 @@ Using `@modelcontextprotocol/sdk` v1.11.x (stable). The v2 alpha splits into `@m
 
 npm username: `marras0914`
 GitHub repo: `github.com/marras0914/cordon`
+npm org: `getcordon` (org name `cordon` was taken)
 
-Package status:
-- `cordon-sdk` — published at 0.1.0 (placeholder), bumped to 0.1.1 locally, needs `npm login` + publish
-- `cordon-cli` — not yet published, name is available
-- `@getcordon/core` — not yet published, name is available (needs `@cordon` npm org or rename to `cordon-core`)
+**Published versions:**
+- `cordon-sdk@0.1.1` ✓
+- `@getcordon/core@0.1.1` ✓
+- `cordon-cli@0.1.2` ✓
 
-To publish after `npm login`:
+To publish a new version:
 ```bash
-cd packages/sdk  && npm run build && npm publish --access public
-cd packages/core && npm run build && npm publish --access public
-cd packages/cli  && npm run build && npm publish --access public
+npm login
+cd packages/sdk  && npm version patch && npm run build && npm publish --access public --otp=XXXXXX
+cd packages/core && npm version patch && npm run build && npm publish --access public --otp=XXXXXX
+cd packages/cli  && npm version patch && npm run build && npm publish --access public --otp=XXXXXX
 ```
 
 ## What's Not Built Yet (v1 deferred)
@@ -139,7 +146,7 @@ cd packages/cli  && npm run build && npm publish --access public
 - HTTP/SSE transport (stdio only for now)
 - Slack/webhook approval channels
 - Web dashboard
-- Rate limiting engine
+- Rate limiting engine (config type exists but is ignored — do not advertise)
 - OTLP audit output
 - Dynamic policy reload (requires restart)
 - Tool argument-level policies
