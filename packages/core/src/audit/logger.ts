@@ -84,8 +84,10 @@ class HostedAuditOutput implements AuditOutput {
         'X-Cordon-Key': this.apiKey,
       },
       body: JSON.stringify(batch),
-    }).catch((err) => {
+    }).catch((err: Error) => {
       process.stderr.write(`[cordon] hosted audit error: ${err.message}\n`);
+      // Put events back so they're retried on next flush
+      this.queue.unshift(...batch);
     });
   }
 

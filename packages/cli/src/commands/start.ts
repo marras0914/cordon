@@ -28,8 +28,13 @@ export async function startCommand(options: StartOptions): Promise<void> {
 
   const shutdown = async () => {
     process.stderr.write('\n[cordon] shutting down...\n');
-    await gateway.stop();
-    process.exit(0);
+    try {
+      await gateway.stop();
+      process.exit(0);
+    } catch (err) {
+      process.stderr.write(`\x1b[31merror\x1b[0m: shutdown failed: ${String(err)}\n`);
+      process.exit(1);
+    }
   };
 
   process.on('SIGINT', shutdown);

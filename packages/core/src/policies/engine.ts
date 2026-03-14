@@ -107,6 +107,13 @@ export class PolicyEngine {
       case 'log-only':
         // Audit logger handles the flagging; call passes through
         return { action: 'allow' };
+
+      default:
+        // Fail secure: block unknown policy actions rather than silently allowing
+        return {
+          action: 'block',
+          reason: `Unknown policy action: ${String(action)}`,
+        };
     }
   }
 }
