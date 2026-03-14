@@ -27,6 +27,12 @@
 
 ---
 
+## Demo
+
+https://github.com/user-attachments/assets/153d978f-6303-443a-b49b-b4ec7ebf0452
+
+---
+
 ## The Problem
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) has made it trivially easy to give AI agents access to powerful tools — databases, file systems, APIs, cloud infrastructure.
