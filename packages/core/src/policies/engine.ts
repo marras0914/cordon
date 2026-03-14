@@ -39,7 +39,7 @@ const WRITE_PREFIXES = [
 function isWriteOperation(toolName: string): boolean {
   const lower = toolName.toLowerCase();
   return WRITE_PREFIXES.some(
-    (w) => lower === w || lower.startsWith(`${w}_`) || lower.startsWith(`${w}-`) || lower.startsWith(w) && lower[w.length] === undefined,
+    (w) => lower === w || lower.startsWith(`${w}_`) || lower.startsWith(`${w}-`),
   );
 }
 

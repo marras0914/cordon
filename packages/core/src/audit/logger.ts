@@ -52,6 +52,9 @@ class FileAuditOutput implements AuditOutput {
 
   constructor(filePath: string) {
     this.stream = createWriteStream(filePath, { flags: 'a', encoding: 'utf8' });
+    this.stream.on('error', (err) => {
+      process.stderr.write(`[cordon] audit file error: ${err.message}\n`);
+    });
   }
 
   write(entry: AuditEntry): void {

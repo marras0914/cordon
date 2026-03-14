@@ -45,18 +45,21 @@ const STEPS = [
     note: 'execute_ prefix triggers approval even for reads — Cordon errs on the side of caution',
     tool: 'execute_sql',
     args: { query: 'SELECT id, email FROM users WHERE active = true LIMIT 50' },
+    requiresApproval: true,
   },
   {
     label: 'Deleting expired sessions',
     note: 'write — should trigger approval prompt',
     tool: 'execute_sql',
     args: { query: 'DELETE FROM sessions WHERE expires_at < NOW()' },
+    requiresApproval: true,
   },
   {
     label: 'Writing a config override',
     note: 'write — should trigger approval prompt',
     tool: 'write_file',
     args: { path: '/etc/app/feature-flags.json', content: '{ "new_billing": true }' },
+    requiresApproval: true,
   },
   {
     label: 'Dropping the users table',
@@ -137,8 +140,13 @@ async function main() {
         out(`   ${RED}✗ Blocked${R}: ${text}`);
       }
     } else {
-      passed++;
-      out(`   ${GREEN}✓ Success${R}: ${text}`);
+      if ((step as { requiresApproval?: boolean }).requiresApproval) {
+        approved++;
+        out(`   ${GREEN}✓ Approved & executed${R}: ${text}`);
+      } else {
+        passed++;
+        out(`   ${GREEN}✓ Success${R}: ${text}`);
+      }
     }
   }
 
