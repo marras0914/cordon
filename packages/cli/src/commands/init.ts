@@ -129,9 +129,21 @@ ${serverBlocks}
     process.stderr.write(
       `\n\x1b[36mRestart Claude Desktop to activate Cordon.\x1b[0m\n`,
     );
-  } else {
+  } else if (!claudePath) {
     process.stderr.write(
-      `\nEdit cordon.config.ts, then run \x1b[36mnpx cordon start\x1b[0m.\n`,
+      `\n\x1b[33mwarn\x1b[0m: Claude Desktop config not found on this system.\n` +
+      `Edit cordon.config.ts, then manually add Cordon to your MCP client config:\n\n` +
+      `  "mcpServers": {\n` +
+      `    "cordon": {\n` +
+      `      "command": "npx",\n` +
+      `      "args": ["cordon-cli", "start", "--config", "${outputPath.replace(/\\/g, '/')}"]\n` +
+      `    }\n` +
+      `  }\n`,
+    );
+  } else {
+    // claudePath found but no existing servers — config written, no patching needed
+    process.stderr.write(
+      `\nEdit cordon.config.ts to add your MCP servers, then run \x1b[36mnpx cordon start\x1b[0m.\n`,
     );
   }
 }

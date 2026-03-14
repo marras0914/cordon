@@ -122,8 +122,23 @@ export class UpstreamManager {
       env: cfg.env,
     });
 
+    // When the upstream process exits, remove it from the registry so the
+    // LLM is no longer offered tools from a dead server.
+    transport.onclose = () => {
+      if (this.clients.has(cfg.name)) {
+        process.stderr.write(`[cordon] warn: upstream '${cfg.name}' disconnected\n`);
+        this.clients.delete(cfg.name);
+        for (const [proxyName, tool] of this.registry) {
+          if (tool.serverName === cfg.name) {
+            this.registry.delete(proxyName);
+          }
+        }
+      }
+    };
+
     try {
       await client.connect(transport);
+      transport.stderr?.pipe(process.stderr);
       this.clients.set(cfg.name, client);
       process.stderr.write(`[cordon] connected to '${cfg.name}'\n`);
     } catch (err) {
