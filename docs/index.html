@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cordon — Security gateway for MCP tool calls</title>
+  <meta name="description" content="Cordon sits between your LLM client and MCP servers, enforcing policies, logging every tool call, and pausing dangerous operations for human approval." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --border: #2a2a2a;
+      --text: #e8e8e8;
+      --muted: #888;
+      --accent: #e85d3f;
+      --code-bg: #1a1a1a;
+      --green: #4ade80;
+      --yellow: #fbbf24;
+      --red: #f87171;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* NAV */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .logo span { color: var(--accent); }
+
+    nav .links { display: flex; gap: 1.5rem; font-size: 0.9rem; color: var(--muted); }
+    nav .links a { color: var(--muted); }
+    nav .links a:hover { color: var(--text); text-decoration: none; }
+
+    /* LAYOUT */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    section { padding: 4rem 0; }
+    section + section { border-top: 1px solid var(--border); }
+
+    /* HERO */
+    .hero { padding: 5rem 0 4rem; }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      padding: 0.2rem 0.6rem;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 580px;
+      margin-bottom: 2rem;
+    }
+
+    .cta-group { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.65rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; text-decoration: none; }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+    /* TERMINAL */
+    .terminal {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      margin-top: 3rem;
+      overflow-x: auto;
+    }
+
+    .terminal .line { display: block; }
+    .terminal .prompt { color: var(--muted); }
+    .terminal .cmd { color: var(--text); }
+    .t-green { color: var(--green); }
+    .t-yellow { color: var(--yellow); }
+    .t-red { color: var(--red); }
+    .t-muted { color: var(--muted); }
+    .t-bold { font-weight: 700; }
+
+    /* PROBLEM */
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+
+    .problem p { color: var(--muted); max-width: 640px; line-height: 1.8; }
+    .problem p + p { margin-top: 1rem; }
+
+    /* HOW IT WORKS */
+    .arch {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 2rem;
+      line-height: 2;
+    }
+
+    .arch .highlight { color: var(--accent); font-weight: 600; }
+
+    /* FEATURES */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .feature {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+
+    .feature-icon { font-size: 1.4rem; margin-bottom: 0.75rem; }
+    .feature h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .feature p { font-size: 0.9rem; color: var(--muted); }
+
+    /* QUICK START */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.25rem 1.5rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      margin-top: 1rem;
+      line-height: 1.7;
+    }
+
+    code { font-family: inherit; }
+
+    .step { margin-top: 2rem; }
+    .step-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    /* DESIGN PARTNERS */
+    .partners {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2rem;
+      margin-top: 2rem;
+    }
+
+    .partners h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+    .partners p { color: var(--muted); font-size: 0.95rem; margin-bottom: 1.25rem; }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <nav class="container">
+    <span class="logo">cor<span>don</span></span>
+    <div class="links">
+      <a href="https://github.com/marras0914/cordon">GitHub</a>
+      <a href="https://cordon-server-production.up.railway.app/dashboard/">Dashboard</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="container">
+    <section class="hero">
+      <div class="badge">Open Source</div>
+      <h1>Security gateway for<br/>MCP tool calls</h1>
+      <p>
+        Cordon sits between your LLM client and MCP servers — enforcing policies,
+        logging every tool call, and pausing dangerous operations for human approval.
+      </p>
+      <div class="cta-group">
+        <a class="btn btn-primary" href="https://github.com/marras0914/cordon">View on GitHub →</a>
+        <a class="btn btn-secondary" href="mailto:arras.marco@gmail.com">Talk to us</a>
+      </div>
+
+      <div class="terminal">
+        <span class="line"><span class="t-muted">  ✓  read_data("customers")        </span><span class="t-green">allowed</span></span>
+        <span class="line"><span class="t-muted">  ✓  read_data("sessions")         </span><span class="t-green">allowed</span></span>
+        <span class="line">&nbsp;</span>
+        <span class="line"><span class="t-yellow t-bold">  ⚠  APPROVAL REQUIRED</span></span>
+        <span class="line"><span class="t-muted">     Server : demo-db</span></span>
+        <span class="line"><span class="t-muted">     Tool   : execute_sql</span></span>
+        <span class="line"><span class="t-muted">     Args   : { "query": "DELETE FROM sessions WHERE expires_at &lt; NOW()" }</span></span>
+        <span class="line">&nbsp;</span>
+        <span class="line"><span class="t-muted">     [A]pprove  [D]eny</span></span>
+        <span class="line"><span class="t-muted">     &gt; </span><span class="t-bold">_</span></span>
+        <span class="line">&nbsp;</span>
+        <span class="line"><span class="t-red">  ✗  drop_table("users")           blocked by policy</span></span>
+        <span class="line"><span class="t-red">  ✗  delete_file("/var/log/app")   blocked by policy</span></span>
+      </div>
+    </section>
+  </div>
+
+  <!-- PROBLEM -->
+  <div class="container">
+    <section class="problem">
+      <h2>MCP has no security model</h2>
+      <p>
+        MCP lets LLMs call real tools — query databases, write files, call APIs.
+        That's powerful. But out of the box, there's nothing between the model and
+        your production systems. No audit log. No way to block a class of operations.
+        No human checkpoint before something irreversible runs.
+      </p>
+      <p>
+        You're just trusting the model. Cordon closes that gap.
+      </p>
+    </section>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="container">
+    <section>
+      <h2>How it works</h2>
+      <p style="color: var(--muted); max-width: 580px;">
+        Cordon is a transparent proxy. It requires no changes to your existing MCP servers
+        or Claude Desktop config — <code>cordon init</code> handles the wiring.
+      </p>
+      <div class="arch">
+        Claude Desktop &nbsp;──stdio──▶&nbsp; <span class="highlight">Cordon</span> &nbsp;──stdio──▶&nbsp; MCP server A<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;──stdio──▶&nbsp; MCP server B<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;──stdio──▶&nbsp; MCP server N
+      </div>
+    </section>
+  </div>
+
+  <!-- FEATURES -->
+  <div class="container">
+    <section>
+      <h2>What you get</h2>
+      <div class="features-grid">
+        <div class="feature">
+          <div class="feature-icon">🛡</div>
+          <h3>Policy enforcement</h3>
+          <p>Block entire tool categories or specific tools by name. Reads pass, writes require approval — or block everything except an explicit allowlist.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">✋</div>
+          <h3>Human-in-the-loop approvals</h3>
+          <p>Dangerous operations pause and wait. Approve or deny from the terminal or a Slack channel before anything runs.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">📋</div>
+          <h3>Full audit log</h3>
+          <p>Every tool call — args, result, policy decision, timestamp — logged to a file or shipped to the hosted dashboard.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">☁️</div>
+          <h3>Hosted dashboard</h3>
+          <p>Centralized audit logs across your team. Manage API keys, view call history, export for compliance.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- QUICK START -->
+  <div class="container">
+    <section>
+      <h2>Get started in 2 minutes</h2>
+
+      <div class="step">
+        <div class="step-label">Step 1 — Install</div>
+        <pre><code>npm install -g cordon-cli</code></pre>
+      </div>
+
+      <div class="step">
+        <div class="step-label">Step 2 — Initialize (patches Claude Desktop automatically)</div>
+        <pre><code>cordon init</code></pre>
+      </div>
+
+      <div class="step">
+        <div class="step-label">Step 3 — Configure your policy</div>
+        <pre><code>// cordon.config.ts
+import { defineConfig } from 'cordon-sdk';
+
+export default defineConfig({
+  servers: [
+    {
+      name: 'my-db',
+      transport: 'stdio',
+      command: 'npx',
+      args: ['-y', '@my-org/db-mcp'],
+      policy: 'approve-writes',
+      tools: {
+        drop_table: { action: 'block' },
+      },
+    },
+  ],
+});</code></pre>
+      </div>
+
+      <div class="step">
+        <div class="step-label">Step 4 — Start</div>
+        <pre><code>cordon start</code></pre>
+      </div>
+    </section>
+  </div>
+
+  <!-- DESIGN PARTNERS -->
+  <div class="container">
+    <section>
+      <h2>Design partners</h2>
+      <div class="partners">
+        <h3>Deploying AI agents at your company?</h3>
+        <p>
+          We're looking for a handful of teams to work closely with as we build out
+          the enterprise features — centralized policy management, SSO, compliance exports.
+          Early partners shape the roadmap and get priority support.
+        </p>
+        <a class="btn btn-primary" href="mailto:arras.marco@gmail.com">Get in touch →</a>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <a href="https://github.com/marras0914/cordon">GitHub</a> &nbsp;·&nbsp;
+    <a href="https://www.npmjs.com/package/cordon-cli">npm</a> &nbsp;·&nbsp;
+    <a href="https://cordon-server-production.up.railway.app/dashboard/">Dashboard</a>
+  </footer>
+
+</body>
+</html>
