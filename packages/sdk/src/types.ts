@@ -50,8 +50,14 @@ export interface ApprovalConfig {
    * Omit for no timeout.
    */
   timeoutMs?: number;
-  /** Required for 'slack' and 'webhook' channels. */
-  webhookUrl?: string;
+  /** Slack bot token (xoxb-...). Required when channel is 'slack'. */
+  slackBotToken?: string;
+  /** Slack channel to post approval requests to (e.g. '#cordon-approvals'). Required when channel is 'slack'. */
+  slackChannel?: string;
+  /** Cordon server endpoint for approval polling. Required when channel is 'slack'. */
+  endpoint?: string;
+  /** API key for the Cordon server. Required when channel is 'slack'. */
+  apiKey?: string;
 }
 
 // ── Audit ─────────────────────────────────────────────────────────────────────

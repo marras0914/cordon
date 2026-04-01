@@ -1,5 +1,6 @@
 import type { ApprovalConfig } from 'cordon-sdk';
 import { TerminalApprovalChannel } from './terminal.js';
+import { SlackApprovalChannel } from './slack.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -37,10 +38,18 @@ export class ApprovalManager {
     switch (type) {
       case 'terminal':
         return new TerminalApprovalChannel();
-      case 'slack':
+      case 'slack': {
+        const { slackBotToken, slackChannel, endpoint, apiKey } = config ?? {};
+        if (!slackBotToken || !slackChannel || !endpoint || !apiKey) {
+          process.stderr.write(
+            `[cordon] warn: slack channel requires slackBotToken, slackChannel, endpoint, and apiKey — falling back to terminal\n`,
+          );
+          return new TerminalApprovalChannel();
+        }
+        return new SlackApprovalChannel(slackBotToken, slackChannel, endpoint, apiKey);
+      }
       case 'web':
       case 'webhook':
-        // v2 — fall back to terminal with a warning
         process.stderr.write(
           `[cordon] warn: approval channel '${type}' not yet implemented, using terminal\n`,
         );

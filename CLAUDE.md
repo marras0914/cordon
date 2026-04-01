@@ -67,6 +67,8 @@ Claude Desktop ──stdio──▶ CordonGateway ──stdio──▶ [MCP serv
 | `packages/core/src/proxy/upstream-manager.ts` | Manages child MCP processes, tool registry, namespace collisions, stale tool cleanup on disconnect |
 | `packages/core/src/policies/engine.ts` | Evaluates allow/block/approve/read-only/approve-writes/log-only |
 | `packages/core/src/approvals/terminal.ts` | TTY-safe approval prompt (singleton readline) |
+| `packages/core/src/approvals/slack.ts` | Slack approval channel — posts blocks to Slack, creates pending record on cordon-server, polls for response |
+| `packages/core/src/approvals/manager.ts` | Wires terminal/slack channels based on config |
 | `packages/core/src/audit/logger.ts` | Structured JSON audit log to stderr or file |
 | `packages/core/src/__tests__/` | Unit tests: policy-engine, audit-logger, interceptor (36 tests) |
 | `packages/cli/src/commands/init.ts` | Reads claude_desktop_config.json, generates cordon.config.ts, patches Claude Desktop |
@@ -147,16 +149,54 @@ cd packages/cli  && npm version patch && npm run build && npm publish --access p
 ## What's Not Built Yet (v1 deferred)
 
 - HTTP/SSE transport (stdio only for now)
-- Slack/webhook approval channels
-- Web dashboard
 - Rate limiting engine (config type exists but is ignored — do not advertise)
 - OTLP audit output
 - Dynamic policy reload (requires restart)
 - Tool argument-level policies
 
-## Month 2 Targets (next big milestone)
+## Hosted Backend (cordon-server)
 
-- Hosted receiver for Slack/mobile approvals
-- Web UI — audit log history viewer
-- User auth (GitHub OAuth)
-- Read-only mode toggle in dashboard
+Live at `https://cordon-server-production.up.railway.app` (Railway, private GitHub repo `marras0914/cordon-server`).
+
+Dashboard: `https://cordon-server-production.up.railway.app/dashboard/` — GitHub OAuth login, users manage their own API keys.
+
+To use hosted audit output:
+```typescript
+audit: {
+  enabled: true,
+  output: 'hosted',
+  endpoint: 'https://cordon-server-production.up.railway.app',
+  apiKey: 'crd_...',
+}
+```
+
+To use Slack approvals:
+```typescript
+approvals: {
+  channel: 'slack',
+  slackBotToken: 'xoxb-...',
+  slackChannel: '#cordon-approvals',
+  endpoint: 'https://cordon-server-production.up.railway.app',
+  apiKey: 'crd_...',
+  timeoutMs: 60_000,
+}
+```
+
+Slack interactions hit `POST /webhooks/slack` — verified via `SLACK_SIGNING_SECRET` env var. `SLACK_BOT_TOKEN` also required on Railway.
+
+## Key Files (cordon-server)
+
+| File | What it does |
+|------|-------------|
+| `src/routes/approvals.ts` | POST/GET pending approvals (polled by CLI) |
+| `src/routes/webhooks.ts` | Slack interaction handler — verifies HMAC, updates approval record |
+| `src/routes/auth.ts` | GitHub OAuth flow, session management |
+| `src/routes/user.ts` | User-scoped API key management |
+| `src/middleware/session.ts` | Session cookie validation |
+
+## Month 3 Targets
+
+- Design partners / outreach (LinkedIn posted 2026-03-17, HN posted 2026-03-17 — 3 upvotes)
+- Pricing page
+- Landing page live at https://getcordon.com (GitHub Pages, `docs/` folder)
+- Commit and publish Slack approval channel (`packages/core/src/approvals/slack.ts` — written, not yet committed)
