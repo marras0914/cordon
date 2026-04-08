@@ -2,6 +2,7 @@ import type { AuditLogger } from '../audit/logger.js';
 import type { ApprovalManager } from '../approvals/manager.js';
 import type { PolicyEngine } from '../policies/engine.js';
 import type { UpstreamManager, ToolCallResponse } from './upstream-manager.js';
+import type { RateLimiter } from '../rate-limiter.js';
 
 /**
  * The hot path. Every tools/call from the LLM client flows through here.
@@ -9,11 +10,12 @@ import type { UpstreamManager, ToolCallResponse } from './upstream-manager.js';
  * Flow:
  *   1. Resolve proxy tool name → server + original tool name
  *   2. Audit: received
- *   3. Evaluate policy → allow / block / approve
- *   4. If approve: await human decision
- *   5. Forward to upstream server
- *   6. Audit: completed
- *   7. Return result to LLM
+ *   3. Rate limit check → block if exceeded
+ *   4. Evaluate policy → allow / block / approve
+ *   5. If approve: await human decision
+ *   6. Forward to upstream server
+ *   7. Audit: completed
+ *   8. Return result to LLM
  */
 export class Interceptor {
   constructor(
@@ -21,6 +23,7 @@ export class Interceptor {
     private policy: PolicyEngine,
     private approvals: ApprovalManager,
     private audit: AuditLogger,
+    private rateLimiter?: RateLimiter,
   ) {}
 
   async handle(proxyToolName: string, args: unknown): Promise<ToolCallResponse> {
@@ -43,7 +46,19 @@ export class Interceptor {
       args,
     });
 
-    // 2. Policy
+    // 2. Rate limit
+    if (this.rateLimiter && !this.rateLimiter.check(serverName, originalName)) {
+      this.audit.log({
+        event: 'tool_call_blocked',
+        callId,
+        serverName,
+        toolName: originalName,
+        reason: 'Rate limit exceeded',
+      });
+      return errorResult('Rate limit exceeded');
+    }
+
+    // 3. Policy
     const decision = this.policy.evaluate(serverName, originalName);
 
     if (decision.action === 'block') {

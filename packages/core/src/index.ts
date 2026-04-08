@@ -1,4 +1,5 @@
 export { CordonGateway } from './gateway.js';
+export { RateLimiter } from './rate-limiter.js';
 export { AuditLogger } from './audit/logger.js';
 export { PolicyEngine } from './policies/engine.js';
 export { ApprovalManager } from './approvals/manager.js';

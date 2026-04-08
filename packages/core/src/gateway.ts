@@ -10,6 +10,7 @@ import { ApprovalManager } from './approvals/manager.js';
 import { PolicyEngine } from './policies/engine.js';
 import { UpstreamManager } from './proxy/upstream-manager.js';
 import { Interceptor } from './proxy/interceptor.js';
+import { RateLimiter } from './rate-limiter.js';
 
 export class CordonGateway {
   private server: Server;
@@ -24,11 +25,13 @@ export class CordonGateway {
     this.policy = new PolicyEngine(config);
     this.approvals = new ApprovalManager(config.approvals);
     this.upstream = new UpstreamManager(config.servers);
+    const rateLimiter = config.rateLimit ? new RateLimiter(config.rateLimit) : undefined;
     this.interceptor = new Interceptor(
       this.upstream,
       this.policy,
       this.approvals,
       this.audit,
+      rateLimiter,
     );
 
     // The front-facing MCP server that Claude Desktop connects to
