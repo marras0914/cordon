@@ -182,6 +182,85 @@
     .feature h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
     .feature p { font-size: 0.9rem; color: var(--muted); }
 
+    /* PRICING */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .plan {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .plan.plan-featured {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+
+    .plan-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .plan-price {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.25rem;
+    }
+
+    .plan-price span {
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    .plan-desc {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .plan-features {
+      list-style: none;
+      margin-bottom: 2rem;
+      flex: 1;
+    }
+
+    .plan-features li {
+      font-size: 0.9rem;
+      color: var(--muted);
+      padding: 0.35rem 0;
+    }
+
+    .plan-features li::before {
+      content: '✓ ';
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .btn-plan {
+      display: block;
+      text-align: center;
+      padding: 0.65rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: opacity 0.15s;
+    }
+    .btn-plan:hover { opacity: 0.85; text-decoration: none; }
+
     /* QUICK START */
     pre {
       background: var(--code-bg);
@@ -330,6 +409,46 @@
           <div class="feature-icon">☁️</div>
           <h3>Hosted dashboard</h3>
           <p>Centralized audit logs across your team. Manage API keys, view call history, export for compliance.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- PRICING -->
+  <div class="container">
+    <section>
+      <h2>Pricing</h2>
+      <p style="color: var(--muted); max-width: 580px;">
+        The CLI is free and open source. The hosted dashboard adds centralized audit logs,
+        team management, and compliance exports.
+      </p>
+      <div class="pricing-grid">
+        <div class="plan">
+          <div class="plan-name">Free</div>
+          <div class="plan-price">$0</div>
+          <p class="plan-desc">For individual developers getting started.</p>
+          <ul class="plan-features">
+            <li>Full proxy engine + policy enforcement</li>
+            <li>Terminal approvals</li>
+            <li>Local audit logging</li>
+            <li>1 hosted API key</li>
+            <li>1,000 hosted events / month</li>
+          </ul>
+          <a class="btn-plan btn-secondary" href="https://cordon-server-production.up.railway.app/dashboard/">Get started</a>
+        </div>
+        <div class="plan plan-featured">
+          <div class="plan-name">Pro</div>
+          <div class="plan-price">$49 <span>/ month</span></div>
+          <p class="plan-desc">For teams deploying AI agents in production.</p>
+          <ul class="plan-features">
+            <li>Everything in Free</li>
+            <li>Unlimited API keys</li>
+            <li>Unlimited hosted events</li>
+            <li>Slack approval channel</li>
+            <li>CSV / JSON audit export</li>
+            <li>30-day log retention</li>
+          </ul>
+          <a class="btn-plan btn-primary" href="https://cordon-server-production.up.railway.app/dashboard/">Upgrade to Pro</a>
         </div>
       </div>
     </section>
