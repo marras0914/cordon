@@ -251,7 +251,7 @@ Policies can be set at the server level (default for all tools) or per-tool (ove
 | Channel | Status |
 |---|---|
 | `terminal` | Available — interactive prompt in your terminal |
-| `slack` | Coming in v0.2 |
+| `slack` | Available — Block Kit messages, HMAC-verified interactions |
 | `web` | Coming in v0.3 |
 | `webhook` | Coming in v0.3 |
 
@@ -261,8 +261,8 @@ Policies can be set at the server level (default for all tools) or per-tool (ove
 |---|---|
 | `stdout` | Available |
 | `file` | Available — JSON lines written to a local file |
-| `otlp` | Coming in v0.2 |
-| `webhook` | Coming in v0.2 |
+| `hosted` | Available — ships events to the Cordon dashboard |
+| `otlp` | Coming in v0.3 |
 
 ---
 
@@ -281,13 +281,13 @@ Policies can be set at the server level (default for all tools) or per-tool (ove
 - [x] MCP proxy with aggregator model (multiple servers, one gateway)
 - [x] Policy engine — allow, block, approve, approve-writes, read-only, log-only
 - [x] Terminal approval channel with TTY-safe prompt
-- [x] Structured JSON audit logging to stdout and file
+- [x] Slack approval channel — Block Kit messages, polls for response
+- [x] Structured JSON audit logging to stdout, file, or hosted dashboard
 - [x] `cordon init` — auto-reads Claude Desktop config and patches it
-- [ ] Slack approval integration
-- [ ] Web dashboard — audit log history viewer
+- [x] Rate limiting — sliding window, global / per-server / per-tool
+- [x] Hosted dashboard — audit log history, CSV/JSON export, GitHub OAuth
+- [x] Stripe billing — Free and Pro tiers
 - [ ] OpenTelemetry export
-- [ ] Rate limiting engine
-- [ ] Audit log export (CSV/JSON) for compliance teams
 - [ ] Team accounts and centralized governance
 - [ ] HTTP/SSE transport support
 

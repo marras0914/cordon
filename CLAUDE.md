@@ -23,7 +23,7 @@ Planning docs live in the parent directory (`../cordon-deux/`) alongside the cod
 npm install          # install all workspace deps
 npm run build        # build all packages via turbo (respects dependency order: sdk → core → cli)
 npm run dev          # watch mode for all packages
-npm test             # run unit tests (vitest, 36 tests in @getcordon/core)
+npm test             # run unit tests (vitest, 62 tests in @getcordon/core)
 ```
 
 Building a single package:
@@ -135,7 +135,7 @@ npm org: `getcordon` (org name `cordon` was taken)
 
 **Published versions:**
 - `cordon-sdk@0.1.1` ✓
-- `@getcordon/core@0.1.1` ✓
+- `@getcordon/core@0.2.0` ✓ (rate limiting)
 - `cordon-cli@0.1.2` ✓
 
 To publish a new version:
@@ -149,10 +149,10 @@ cd packages/cli  && npm version patch && npm run build && npm publish --access p
 ## What's Not Built Yet (v1 deferred)
 
 - HTTP/SSE transport (stdio only for now)
-- Rate limiting engine (config type exists but is ignored — do not advertise)
 - OTLP audit output
 - Dynamic policy reload (requires restart)
 - Tool argument-level policies
+- Rate limiting `onExceeded: 'queue'` mode (queue behavior currently acts as block)
 
 ## Hosted Backend (cordon-server)
 
@@ -188,15 +188,38 @@ Slack interactions hit `POST /webhooks/slack` — verified via `SLACK_SIGNING_SE
 
 | File | What it does |
 |------|-------------|
+| `src/routes/events.ts` | POST /events (ingest), GET /events (list), GET /events/export (CSV/JSON download) |
 | `src/routes/approvals.ts` | POST/GET pending approvals (polled by CLI) |
 | `src/routes/webhooks.ts` | Slack interaction handler — verifies HMAC, updates approval record |
 | `src/routes/auth.ts` | GitHub OAuth flow, session management |
 | `src/routes/user.ts` | User-scoped API key management |
 | `src/middleware/session.ts` | Session cookie validation |
+| `src/retention.ts` | 30-day event retention job — runs on startup, then hourly |
 
-## Month 3 Targets
+## Rate Limiting
 
-- Design partners / outreach (LinkedIn posted 2026-03-17, HN posted 2026-03-17 — 3 upvotes)
-- Pricing page
-- Landing page live at https://getcordon.com (GitHub Pages, `docs/` folder)
-- Commit and publish Slack approval channel (`packages/core/src/approvals/slack.ts` — written, not yet committed)
+`RateLimiter` class in `packages/core/src/rate-limiter.ts`. Sliding window (60s), three dimensions: global, per-server, per-tool. Blocked calls consume no slot. Wired into `Interceptor` — check runs before policy. Activated when `rateLimit` is present in config:
+
+```typescript
+rateLimit: {
+  maxCallsPerMinute: 60,
+  perServer: { database: 20 },
+  perTool: { execute_sql: 10 },
+  onExceeded: 'block', // 'queue' currently behaves same as 'block'
+}
+```
+
+## Month 3 Targets (April 2026)
+
+**Done:**
+- Rate limiting engine — `RateLimiter` sliding window, wired into interceptor (62 tests passing)
+- Audit export — `GET /events/export?format=csv|json`, dashboard Export CSV button, live on Railway
+- 30-day log retention — hourly cleanup job running in prod
+- Slack approval channel — committed, tested (14 unit tests)
+- Stripe billing — checkout (Pro $49/mo), customer portal, webhook lifecycle (upgrade/downgrade/cancel), live on Railway
+- Pricing page on getcordon.com — Free + Pro plans with feature breakdown
+- Plan limit enforcement — free: 1 API key, 1K events/mo. Enforced at key creation + event ingestion. Usage endpoint at `GET /user/usage`
+- `@getcordon/core@0.2.0` published 2026-04-08
+
+**Next:**
+- Design partner outreach (LinkedIn posted 2026-03-17, HN posted 2026-03-17 — 3 upvotes, retry needed)
