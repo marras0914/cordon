@@ -149,6 +149,31 @@
     .problem p { color: var(--muted); max-width: 640px; line-height: 1.8; }
     .problem p + p { margin-top: 1rem; }
 
+    /* WORKS WITH */
+    .works-with {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0.75rem;
+      margin-top: 2rem;
+    }
+    .works-with-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.9rem;
+    }
+    .works-with-item .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green); flex-shrink: 0;
+    }
+    .works-with-sub {
+      color: var(--muted); font-size: 0.85rem; margin-top: 0.75rem;
+    }
+
     /* HOW IT WORKS */
     .arch {
       background: var(--surface);
@@ -352,6 +377,29 @@
         <span class="line"><span class="t-red">  ✗  drop_table("users")           blocked by policy</span></span>
         <span class="line"><span class="t-red">  ✗  delete_file("/var/log/app")   blocked by policy</span></span>
       </div>
+    </section>
+  </div>
+
+  <!-- WORKS WITH -->
+  <div class="container">
+    <section>
+      <h2>Works with your setup</h2>
+      <p style="color: var(--muted); max-width: 580px;">
+        Any MCP client, any MCP server. Cordon speaks stdio — the transport every
+        major client already uses. <code>cordon init</code> auto-patches supported
+        clients; others drop in with a one-line config change.
+      </p>
+      <div class="works-with">
+        <div class="works-with-item"><span class="dot"></span>Claude Desktop</div>
+        <div class="works-with-item"><span class="dot"></span>Claude Code</div>
+        <div class="works-with-item"><span class="dot"></span>Cursor</div>
+        <div class="works-with-item"><span class="dot"></span>Windsurf</div>
+        <div class="works-with-item"><span class="dot"></span>VS Code</div>
+        <div class="works-with-item"><span class="dot"></span>Any stdio MCP client</div>
+      </div>
+      <p class="works-with-sub">
+        Using an MCP server? If it runs over stdio, Cordon proxies it — no server-side changes required.
+      </p>
     </section>
   </div>
 

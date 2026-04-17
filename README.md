@@ -315,6 +315,14 @@ npm run demo
 
 ---
 
+## Works great with
+
+- **[Agent Toolbelt](https://www.npmjs.com/package/agent-toolbelt)** — a typed toolkit of ready-made MCP tools (web search, fetch, filesystem, and more). Wire it into Claude Desktop, then route those tool calls through Cordon for policy enforcement and audit logging. Agent Toolbelt gives your agents power; Cordon makes sure they ask before using it.
+
+- **Build & Ship MCP Tools** — the companion course that walks through building your own MCP servers end to end. Module 6 covers securing your server with Cordon. <!-- TODO: add course URL once live -->
+
+---
+
 ## Contributing
 
 Cordon is open source and we welcome contributions.
