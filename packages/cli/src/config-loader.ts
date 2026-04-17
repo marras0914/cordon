@@ -53,3 +53,7 @@ function applyDefaults(config: CordonConfig): ResolvedConfig {
     approvals: config.approvals ?? { channel: 'terminal' },
   };
 }
+
+export function emptyConfig(): ResolvedConfig {
+  return applyDefaults({ servers: [] });
+}
