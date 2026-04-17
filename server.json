@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.marras0914/cordon",
   "title": "Cordon",
-  "description": "Security gateway for MCP tool calls. Sits between your LLM client and your MCP servers — enforcing per-tool policies (allow, block, approve, read-only, log-only), logging every call, and pausing dangerous operations for human approval in the terminal or Slack.",
-  "version": "0.1.4",
+  "description": "Security gateway for MCP. Policy enforcement, audit logging, human-in-the-loop approvals.",
+  "version": "0.1.5",
   "websiteUrl": "https://getcordon.com",
   "repository": {
     "url": "https://github.com/marras0914/cordon",
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "cordon-cli",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
