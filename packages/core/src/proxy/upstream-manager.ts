@@ -3,6 +3,20 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import type { StdioServerConfig } from 'cordon-sdk';
 
+// On Windows, bare Node tool names like `npx` aren't resolvable via
+// CreateProcess — we need the `.cmd` shim. Claude Desktop and other clients
+// spawn Cordon with a restricted PATH, so this rewrite is what lets
+// `command: 'npx'` in a cordon.config.ts actually work.
+const WINDOWS_CMD_SHIMS = new Set(['npx', 'npm', 'yarn', 'pnpm', 'bun', 'npm-cli']);
+
+function resolveCommand(command: string): string {
+  if (process.platform !== 'win32') return command;
+  if (command.includes('/') || command.includes('\\')) return command; // already a path
+  if (command.toLowerCase().endsWith('.cmd') || command.toLowerCase().endsWith('.exe')) return command;
+  if (WINDOWS_CMD_SHIMS.has(command.toLowerCase())) return `${command}.cmd`;
+  return command;
+}
+
 /** The actual return type of Client.callTool() — wider than the named CallToolResult. */
 export type ToolCallResponse = Awaited<ReturnType<Client['callTool']>>;
 
@@ -117,7 +131,7 @@ export class UpstreamManager {
   private async connectServer(cfg: StdioServerConfig): Promise<void> {
     const client = new Client({ name: 'cordon', version: '0.1.0' });
     const transport = new StdioClientTransport({
-      command: cfg.command,
+      command: resolveCommand(cfg.command),
       args: cfg.args ?? [],
       env: cfg.env,
     });

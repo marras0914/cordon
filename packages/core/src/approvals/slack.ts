@@ -11,7 +11,8 @@ export class SlackApprovalChannel {
   ) {}
 
   async request(ctx: ApprovalContext): Promise<ApprovalResult> {
-    // Post Slack message and create pending approval record in parallel
+    // Post Slack message first. If this fails, there's nothing to click —
+    // fail the approval immediately instead of polling for the timeout.
     let slackTs: string | undefined;
     let slackChannelId: string | undefined;
 
@@ -29,15 +30,32 @@ export class SlackApprovalChannel {
         }),
       });
 
-      const msgData = await msgRes.json() as { ok: boolean; ts?: string; channel?: string; error?: string };
+      const msgData = (await msgRes.json()) as {
+        ok: boolean;
+        ts?: string;
+        channel?: string;
+        error?: string;
+      };
+
       if (msgData.ok) {
         slackTs = msgData.ts;
         slackChannelId = msgData.channel;
       } else {
-        process.stderr.write(`[cordon] slack post failed: ${msgData.error ?? 'unknown'}\n`);
+        const err = msgData.error ?? 'unknown';
+        const hint = slackErrorHint(err, this.channel);
+        process.stderr.write(`[cordon] slack post failed: ${err}${hint ? ' — ' + hint : ''}\n`);
+        return {
+          approved: false,
+          reason: `Slack approval request failed: ${err}${hint ? ' (' + hint + ')' : ''}`,
+        };
       }
     } catch (err) {
-      process.stderr.write(`[cordon] slack post error: ${(err as Error).message}\n`);
+      const message = (err as Error).message;
+      process.stderr.write(`[cordon] slack post error: ${message}\n`);
+      return {
+        approved: false,
+        reason: `Cannot reach Slack to request approval: ${message}`,
+      };
     }
 
     // Create pending approval record on cordon-server
@@ -144,4 +162,24 @@ export class SlackApprovalChannel {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function slackErrorHint(error: string, channel: string): string {
+  switch (error) {
+    case 'not_in_channel':
+      return `invite the bot to ${channel} with /invite @<bot-name>`;
+    case 'channel_not_found':
+      return `channel ${channel} does not exist or the bot can't see it`;
+    case 'invalid_auth':
+    case 'not_authed':
+    case 'token_revoked':
+    case 'token_expired':
+      return 'bot token is invalid or expired — re-issue from the Slack app dashboard';
+    case 'missing_scope':
+      return "bot needs 'chat:write' scope (OAuth & Permissions → Bot Token Scopes, then Reinstall to Workspace)";
+    case 'rate_limited':
+      return 'Slack rate limit — retry shortly';
+    default:
+      return '';
+  }
 }

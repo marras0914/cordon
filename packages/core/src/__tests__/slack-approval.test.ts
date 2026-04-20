@@ -240,22 +240,38 @@ describe('SlackApprovalChannel', () => {
       expect(result).toEqual({ approved: false, reason: 'Failed to register approval with server' });
     });
 
-    it('still creates approval record even when Slack post fails', async () => {
-      fetchMock
-        .mockRejectedValueOnce(new Error('slack down'))  // Slack fails
-        .mockResolvedValueOnce(serverOkResponse())       // server record still created
-        .mockResolvedValueOnce(pollResponse('approved'));
+    it('fails fast when Slack network request throws, without polling', async () => {
+      // When Slack is unreachable, there is no clickable message — polling for
+      // 2 minutes would just confuse the user. Return immediately with a clear
+      // reason so Claude surfaces an actionable error.
+      fetchMock.mockRejectedValueOnce(new Error('slack down'));
 
-      vi.useFakeTimers();
       const channel = makeChannel();
-      const promise = channel.request(makeCtx());
-      await vi.runAllTimersAsync();
+      const result = await channel.request(makeCtx());
 
-      const result = await promise;
-      expect(result).toEqual({ approved: true });
-      // Confirm server was called despite Slack failure
-      const serverCall = fetchMock.mock.calls[1] as [string, RequestInit];
-      expect(serverCall[0]).toBe('https://cordon-server.test/approvals');
+      expect(result.approved).toBe(false);
+      if (!result.approved) {
+        expect(result.reason).toContain('Cannot reach Slack');
+        expect(result.reason).toContain('slack down');
+      }
+      // Only the Slack call should have happened — no server registration, no polling.
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('fails fast when Slack returns ok:false (e.g., not_in_channel)', async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: false, error: 'not_in_channel' }), { status: 200 }),
+      );
+
+      const channel = makeChannel();
+      const result = await channel.request(makeCtx());
+
+      expect(result.approved).toBe(false);
+      if (!result.approved) {
+        expect(result.reason).toContain('not_in_channel');
+        expect(result.reason).toContain('invite the bot');
+      }
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
   });
 
