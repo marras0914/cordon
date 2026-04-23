@@ -74,6 +74,22 @@ export class PolicyEngine {
     return this.resolve(serverPolicy, toolName);
   }
 
+  /**
+   * Returns true if this tool should be filtered out of the tools/list
+   * response sent to the client. The gateway uses this to hide a tool
+   * before the model can see it; the model can't be prompt-injected into
+   * calling a tool it doesn't know exists. `evaluate()` will still block
+   * the tool at call time as a failsafe.
+   */
+  isHidden(serverName: string, toolName: string): boolean {
+    const toolPolicy = this.toolPolicies.get(`${serverName}/${toolName}`);
+    if (toolPolicy !== undefined) {
+      const action = typeof toolPolicy === 'string' ? toolPolicy : toolPolicy.action;
+      return action === 'hidden';
+    }
+    return this.serverPolicies.get(serverName) === 'hidden';
+  }
+
   private resolve(policy: ToolPolicy, toolName: string): PolicyDecision {
     const action = typeof policy === 'string' ? policy : policy.action;
     const customReason = typeof policy === 'object' ? policy.reason : undefined;
@@ -107,6 +123,16 @@ export class PolicyEngine {
       case 'log-only':
         // Audit logger handles the flagging; call passes through
         return { action: 'allow' };
+
+      case 'hidden':
+        // Gateway filters these out of tools/list. If a call still reaches
+        // the engine (client somehow knew the name), reject to fail secure.
+        return {
+          action: 'block',
+          reason:
+            customReason ??
+            `Tool '${toolName}' is not exposed to clients (policy: hidden)`,
+        };
 
       default:
         // Fail secure: block unknown policy actions rather than silently allowing

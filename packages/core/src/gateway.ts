@@ -67,13 +67,17 @@ export class CordonGateway {
   // ── Handlers ────────────────────────────────────────────────────────────────
 
   private registerHandlers(): void {
-    // tools/list — return the merged tool registry from all upstream servers
+    // tools/list — return the merged tool registry, with `hidden`-policy
+    // tools filtered out so the model never sees them.
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      const tools = this.upstream.getTools().map((t) => ({
-        name: t.proxyName,
-        description: t.description,
-        inputSchema: t.inputSchema,
-      }));
+      const tools = this.upstream
+        .getTools()
+        .filter((t) => !this.policy.isHidden(t.serverName, t.originalName))
+        .map((t) => ({
+          name: t.proxyName,
+          description: t.description,
+          inputSchema: t.inputSchema,
+        }));
       return { tools };
     });
 

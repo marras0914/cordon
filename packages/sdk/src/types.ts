@@ -6,7 +6,8 @@ export type PolicyAction =
   | 'approve'         // Pause pending human approval
   | 'approve-writes'  // Reads pass, writes require approval
   | 'read-only'       // Block all write operations
-  | 'log-only';       // Pass through but flag in audit log
+  | 'log-only'        // Pass through but flag in audit log
+  | 'hidden';         // Filter from tools/list AND block at call time (prompt-injection safe)
 
 export type ToolPolicy =
   | PolicyAction

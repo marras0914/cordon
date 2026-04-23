@@ -159,4 +159,72 @@ describe('PolicyEngine', () => {
       expect(engine.evaluate('strict', 'read_data').action).toBe('block');
     });
   });
+
+  describe('hidden policy', () => {
+    it('isHidden returns true for server-level hidden policy', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{ name: 'secret', transport: 'stdio', command: 'npx', args: [], policy: 'hidden' }],
+      }));
+      expect(engine.isHidden('secret', 'any_tool')).toBe(true);
+    });
+
+    it('isHidden returns false for non-hidden policies', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{ name: 'open', transport: 'stdio', command: 'npx', args: [], policy: 'allow' }],
+      }));
+      expect(engine.isHidden('open', 'any_tool')).toBe(false);
+    });
+
+    it('isHidden returns true for tool-level hidden overriding server allow', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{
+          name: 'db', transport: 'stdio', command: 'npx', args: [],
+          policy: 'allow',
+          tools: { drop_table: 'hidden' },
+        }],
+      }));
+      expect(engine.isHidden('db', 'drop_table')).toBe(true);
+      expect(engine.isHidden('db', 'read_data')).toBe(false);
+    });
+
+    it('isHidden returns false for tool-level allow overriding server hidden', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{
+          name: 'db', transport: 'stdio', command: 'npx', args: [],
+          policy: 'hidden',
+          tools: { safe_tool: 'allow' },
+        }],
+      }));
+      expect(engine.isHidden('db', 'safe_tool')).toBe(false);
+      expect(engine.isHidden('db', 'secret_tool')).toBe(true);
+    });
+
+    it('evaluate() blocks hidden tools as a failsafe', () => {
+      // Gateway filters hidden tools out of tools/list, but if a client
+      // somehow knows a hidden tool's name and calls it, the engine should
+      // still reject rather than forward the call.
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{ name: 'db', transport: 'stdio', command: 'npx', args: [], policy: 'hidden' }],
+      }));
+      const result = engine.evaluate('db', 'any_tool');
+      expect(result.action).toBe('block');
+      if (result.action === 'block') {
+        expect(result.reason).toContain('hidden');
+      }
+    });
+
+    it('evaluate() uses custom reason from tool-level hidden config', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{
+          name: 'db', transport: 'stdio', command: 'npx', args: [],
+          tools: { drop_table: { action: 'hidden', reason: 'Internal tool, never exposed.' } },
+        }],
+      }));
+      const result = engine.evaluate('db', 'drop_table');
+      expect(result).toEqual({
+        action: 'block',
+        reason: 'Internal tool, never exposed.',
+      });
+    });
+  });
 });
