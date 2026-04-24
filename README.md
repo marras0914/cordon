@@ -202,6 +202,38 @@ One policy setting to block all write operations across a server. Zero guesswork
 policy: 'read-only'  // any tool starting with write/create/update/delete/drop/execute/... is blocked
 ```
 
+### Hidden Tools
+
+For tools the model should never even see — not just rejected on call, but filtered from the `tools/list` response entirely. Closes a prompt-injection surface: if the model never knows a tool exists, it can't be tricked into calling it.
+
+```typescript
+{
+  name: 'database',
+  policy: 'approve-writes',
+  tools: {
+    drop_table:      'block',   // call attempts are rejected
+    internal_admin:  'hidden',  // not advertised to the client at all
+  },
+}
+```
+
+### Closed-World Tool Catalogs
+
+Declare the exact tool surface your upstream server is expected to advertise. When the upstream adds a new tool in a future release, Cordon blocks it automatically until you explicitly promote it.
+
+```typescript
+{
+  name: 'postgres',
+  command: 'npx',
+  args: ['-y', '@modelcontextprotocol/server-postgres', process.env.POSTGRES_URL!],
+  policy: 'read-only',
+  knownTools: ['query', 'list_tables', 'describe_table'],  // your approved surface
+  onUnknownTool: 'block',                                  // default when knownTools is set
+}
+```
+
+If the next Postgres MCP release adds `truncate_table`, Cordon blocks it with a stderr warning — no policy update needed. Leave `knownTools` undefined for backwards-compatible open-world behavior.
+
 ---
 
 ## How It Works
@@ -232,6 +264,7 @@ Your LLM client and MCP servers don't change at all. `cordon init` handles the c
 | `approve-writes` | Reads pass through; writes require approval |
 | `read-only` | All write operations are blocked |
 | `log-only` | Pass through but flagged in the audit log |
+| `hidden` | Filtered from tools/list — the model never sees it |
 
 Policies can be set at the server level (default for all tools) or per-tool (overrides the server default):
 
@@ -279,7 +312,8 @@ Policies can be set at the server level (default for all tools) or per-tool (ove
 ## Roadmap
 
 - [x] MCP proxy with aggregator model (multiple servers, one gateway)
-- [x] Policy engine — allow, block, approve, approve-writes, read-only, log-only
+- [x] Policy engine — allow, block, approve, approve-writes, read-only, log-only, hidden
+- [x] Closed-world tool catalogs — `knownTools` + `onUnknownTool` for future-proof upstream surface control
 - [x] Terminal approval channel with TTY-safe prompt
 - [x] Slack approval channel — Block Kit messages, polls for response
 - [x] Structured JSON audit logging to stdout, file, or hosted dashboard

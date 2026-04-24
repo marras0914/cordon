@@ -1,6 +1,6 @@
 {
   "name": "cordon-sdk",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "TypeScript config SDK for Cordon — the security gateway for AI agents",
   "author": "marras0914",
   "license": "MIT",

@@ -32,6 +32,29 @@ export interface StdioServerConfig {
    * @example { 'execute': 'approve', 'query': 'allow', 'delete': 'block' }
    */
   tools?: Record<string, ToolPolicy>;
+  /**
+   * Explicit list of tool names this server is expected to advertise. When
+   * set, Cordon treats any upstream tool NOT in this list (and not keyed in
+   * `tools`) as "unknown" and applies `onUnknownTool`. Lets operators
+   * opt into a closed-world view of the upstream's tool surface so that a
+   * new tool added in a future upstream release doesn't silently become
+   * callable.
+   *
+   * Use `cordon discover` to populate this from the live upstream on
+   * first setup (coming in a future release).
+   *
+   * Leave undefined to disable the check entirely (backwards compatible).
+   */
+  knownTools?: string[];
+  /**
+   * What to do when an upstream advertises a tool that isn't in `knownTools`
+   * or `tools`. `'block'` drops it from tools/list (and from the registry,
+   * so it can't be called). `'allow'` exposes it under the server-level
+   * policy, with a stderr warning so the operator knows to add it.
+   * Only takes effect when `knownTools` is set.
+   * @default 'block'
+   */
+  onUnknownTool?: 'allow' | 'block';
 }
 
 export type ServerConfig = StdioServerConfig;

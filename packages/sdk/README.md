@@ -65,8 +65,29 @@ export default defineConfig({
 | `approve-writes` | Reads pass through, writes require approval |
 | `read-only` | Writes are blocked, reads pass through |
 | `log-only` | Pass through, flagged in audit log |
+| `hidden` | Filtered from tools/list — the model never sees it |
 
 Policies can be set at the server level or per-tool. Per-tool overrides the server default.
+
+## Closed-world tool catalogs
+
+Opt into a strict list of tools your upstream server is allowed to advertise. New tools added in future upstream releases are blocked until you approve them explicitly:
+
+```typescript
+{
+  name: 'postgres',
+  transport: 'stdio',
+  command: 'npx',
+  args: ['-y', '@modelcontextprotocol/server-postgres', process.env.POSTGRES_URL!],
+  policy: 'read-only',
+  knownTools: ['query', 'list_tables', 'describe_table'],
+  onUnknownTool: 'block',  // default when knownTools is set
+}
+```
+
+- `knownTools: string[]` — tools you've vouched for. Tools keyed in `tools` (with explicit policy overrides) are also treated as known.
+- `onUnknownTool: 'block' | 'allow'` — default `'block'`. With `'allow'`, unknown tools still pass through but emit a stderr warning.
+- Leave `knownTools` undefined to disable the check (backwards compatible).
 
 ## Full documentation
 

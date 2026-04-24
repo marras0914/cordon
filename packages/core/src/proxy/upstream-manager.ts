@@ -20,6 +20,58 @@ function resolveCommand(command: string): string {
 /** The actual return type of Client.callTool() — wider than the named CallToolResult. */
 export type ToolCallResponse = Awaited<ReturnType<Client['callTool']>>;
 
+// ── Unknown-tool filter ───────────────────────────────────────────────────────
+
+export interface UnknownToolFilterResult {
+  /** Tools that make it through to the registry. */
+  included: Tool[];
+  /** Unknown tools dropped because onUnknownTool === 'block'. */
+  blocked: Tool[];
+  /** Unknown tools let through because onUnknownTool === 'allow' (warn operator). */
+  allowedWithWarning: Tool[];
+}
+
+/**
+ * Filter upstream-advertised tools against the operator's known-tool
+ * catalog. Feature is inert unless `config.knownTools` is set (undefined =
+ * backwards-compatible pass-through). A tool is considered "known" if it's
+ * either in `config.knownTools` or keyed in `config.tools` (operator
+ * already wrote an explicit policy for it).
+ */
+export function filterUnknownTools(
+  tools: Tool[],
+  config: StdioServerConfig,
+): UnknownToolFilterResult {
+  if (config.knownTools === undefined) {
+    return { included: tools, blocked: [], allowedWithWarning: [] };
+  }
+
+  const explicitKnown = new Set<string>([
+    ...Object.keys(config.tools ?? {}),
+    ...config.knownTools,
+  ]);
+
+  const onUnknownTool = config.onUnknownTool ?? 'block';
+  const result: UnknownToolFilterResult = {
+    included: [],
+    blocked: [],
+    allowedWithWarning: [],
+  };
+
+  for (const tool of tools) {
+    if (explicitKnown.has(tool.name)) {
+      result.included.push(tool);
+    } else if (onUnknownTool === 'block') {
+      result.blocked.push(tool);
+    } else {
+      result.allowedWithWarning.push(tool);
+      result.included.push(tool);
+    }
+  }
+
+  return result;
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface ToolWithOrigin extends Tool {
@@ -42,6 +94,10 @@ export class UpstreamManager {
   private registry = new Map<string, ToolWithOrigin>();
 
   constructor(private configs: StdioServerConfig[]) {}
+
+  private getServerConfig(serverName: string): StdioServerConfig | undefined {
+    return this.configs.find((c) => c.name === serverName);
+  }
 
   async connect(): Promise<void> {
     await Promise.all(this.configs.map((cfg) => this.connectServer(cfg)));
@@ -87,21 +143,46 @@ export class UpstreamManager {
   async refreshRegistry(): Promise<ToolWithOrigin[]> {
     this.registry.clear();
 
-    // Gather tools per server
-    const perServer = new Map<string, Tool[]>();
+    // Gather raw tool lists from each upstream
+    const rawPerServer = new Map<string, Tool[]>();
     for (const [serverName, client] of this.clients) {
       try {
         const { tools } = await client.listTools();
-        perServer.set(serverName, tools);
+        rawPerServer.set(serverName, tools);
       } catch (err) {
         process.stderr.write(
           `[cordon] warn: failed to list tools from '${serverName}': ${String(err)}\n`,
         );
-        perServer.set(serverName, []);
+        rawPerServer.set(serverName, []);
       }
     }
 
-    // Count name occurrences to detect collisions
+    // Apply per-server unknown-tool filter. This runs BEFORE collision
+    // counting so filtered-out tools don't cause spurious name collisions.
+    const perServer = new Map<string, Tool[]>();
+    for (const [serverName, tools] of rawPerServer) {
+      const cfg = this.getServerConfig(serverName);
+      if (!cfg) {
+        perServer.set(serverName, tools);
+        continue;
+      }
+      const { included, blocked, allowedWithWarning } = filterUnknownTools(tools, cfg);
+      for (const t of blocked) {
+        process.stderr.write(
+          `[cordon] unknown tool '${t.name}' on server '${serverName}' blocked ` +
+            `(onUnknownTool: 'block'). Add to knownTools in config to expose.\n`,
+        );
+      }
+      for (const t of allowedWithWarning) {
+        process.stderr.write(
+          `[cordon] unknown tool '${t.name}' on server '${serverName}' allowed ` +
+            `(onUnknownTool: 'allow'). Consider adding to knownTools to silence this.\n`,
+        );
+      }
+      perServer.set(serverName, included);
+    }
+
+    // Count name occurrences (on the filtered set) to detect collisions
     const nameCounts = new Map<string, number>();
     for (const tools of perServer.values()) {
       for (const tool of tools) {

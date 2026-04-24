@@ -38,8 +38,8 @@ await gateway.stop();
 
 ## What's included
 
-- **UpstreamManager** — manages child-process MCP servers, aggregates their tool registries
-- **PolicyEngine** — evaluates policies per tool call; includes write-detection heuristic for `read-only` policies
+- **UpstreamManager** — manages child-process MCP servers, aggregates their tool registries, filters unknown tools against per-server `knownTools` catalogs
+- **PolicyEngine** — evaluates policies per tool call (allow / block / approve / approve-writes / read-only / log-only / hidden); includes write-detection heuristic for `read-only` and `approve-writes`; `isHidden()` query for the gateway's tools/list filter
 - **Interceptor** — the hot path; every tool call flows through policy check + rate limit + audit log
 - **ApprovalManager** — routes approvals to terminal or Slack channels
 - **AuditLogger** — structured JSON logging to stdout, file, or hosted endpoint

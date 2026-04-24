@@ -1,6 +1,6 @@
 {
   "name": "@getcordon/core",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Core proxy engine for Cordon — the security gateway for AI agents",
   "author": "marras0914",
   "license": "MIT",

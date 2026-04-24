@@ -23,7 +23,8 @@ Restart Claude Desktop after `cordon init`. Every MCP tool call now flows throug
 - Scans `claude_desktop_config.json` and generates a starter `cordon.config.ts`
 - Patches your MCP client config to route through Cordon (opt-in, backed up)
 - Runs the gateway as an MCP server that aggregates your existing upstream servers
-- Enforces per-tool policies (allow, block, approve, read-only, log-only)
+- Enforces per-tool policies (allow, block, approve, read-only, log-only, hidden)
+- Supports closed-world tool catalogs via `knownTools` so new upstream tools don't silently become callable
 - Surfaces approval prompts in the terminal, or Slack via the hosted dashboard
 
 ## Config example
@@ -39,6 +40,9 @@ export default defineConfig({
       command: 'npx',
       args: ['-y', '@modelcontextprotocol/server-postgres', process.env.POSTGRES_URL!],
       policy: 'read-only',
+      // Optional: declare the exact tool surface you expect. New tools in
+      // future upstream releases get blocked until you add them here.
+      knownTools: ['query', 'list_tables', 'describe_table'],
     },
   ],
   audit: { enabled: true, output: 'file' },
