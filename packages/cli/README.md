@@ -23,8 +23,9 @@ Restart Claude Desktop after `cordon init`. Every MCP tool call now flows throug
 - Scans `claude_desktop_config.json` and generates a starter `cordon.config.ts`
 - Patches your MCP client config to route through Cordon (opt-in, backed up)
 - Runs the gateway as an MCP server that aggregates your existing upstream servers
-- Enforces per-tool policies (allow, block, approve, read-only, log-only, hidden)
+- Enforces per-tool policies (allow, block, approve, read-only, log-only, hidden, sql-read-only, sql-approve-writes)
 - Supports closed-world tool catalogs via `knownTools` so new upstream tools don't silently become callable
+- SQL-aware policies parse the statement in tool-call args and decide based on type (SELECT vs DML vs DDL)
 - Surfaces approval prompts in the terminal, or Slack via the hosted dashboard
 
 ## Config example

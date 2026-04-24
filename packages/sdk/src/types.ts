@@ -1,17 +1,28 @@
 // ── Policy ────────────────────────────────────────────────────────────────────
 
 export type PolicyAction =
-  | 'allow'           // Pass through immediately
-  | 'block'           // Reject, no forwarding
-  | 'approve'         // Pause pending human approval
-  | 'approve-writes'  // Reads pass, writes require approval
-  | 'read-only'       // Block all write operations
-  | 'log-only'        // Pass through but flag in audit log
-  | 'hidden';         // Filter from tools/list AND block at call time (prompt-injection safe)
+  | 'allow'              // Pass through immediately
+  | 'block'              // Reject, no forwarding
+  | 'approve'            // Pause pending human approval
+  | 'approve-writes'     // Reads pass, writes require approval (tool-name heuristic)
+  | 'read-only'          // Block all write operations (tool-name heuristic)
+  | 'log-only'           // Pass through but flag in audit log
+  | 'hidden'             // Filter from tools/list AND block at call time
+  | 'sql-read-only'      // Parse the SQL arg, block anything that isn't SELECT (fail-closed on unparseable)
+  | 'sql-approve-writes'; // Parse the SQL arg; SELECT passes, writes require approval, unparseable blocks
 
 export type ToolPolicy =
   | PolicyAction
-  | { action: PolicyAction; reason?: string };
+  | {
+      action: PolicyAction;
+      /** Custom message returned to the agent when this policy blocks a call. */
+      reason?: string;
+      /**
+       * For `sql-read-only` / `sql-approve-writes` only: the argument name
+       * containing the SQL text. Defaults to `'sql'`.
+       */
+      sqlArg?: string;
+    };
 
 // ── Server config ─────────────────────────────────────────────────────────────
 

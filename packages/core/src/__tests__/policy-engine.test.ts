@@ -160,6 +160,142 @@ describe('PolicyEngine', () => {
     });
   });
 
+  describe('sql-read-only policy', () => {
+    function makeEngine(sqlArg = 'sql') {
+      return new PolicyEngine(makeConfig({
+        servers: [{
+          name: 'postgres', transport: 'stdio', command: 'npx', args: [],
+          tools: {
+            query: sqlArg === 'sql' ? 'sql-read-only' : { action: 'sql-read-only', sqlArg },
+          },
+        }],
+      }));
+    }
+
+    it('allows a plain SELECT', () => {
+      const engine = makeEngine();
+      expect(engine.evaluate('postgres', 'query', { sql: 'SELECT 1' })).toEqual({ action: 'allow' });
+    });
+
+    it('allows WITH ... SELECT (CTE-wrapped read)', () => {
+      const engine = makeEngine();
+      expect(
+        engine.evaluate('postgres', 'query', {
+          sql: 'WITH x AS (SELECT id FROM users) SELECT * FROM x',
+        }),
+      ).toEqual({ action: 'allow' });
+    });
+
+    it('blocks DELETE', () => {
+      const engine = makeEngine();
+      const result = engine.evaluate('postgres', 'query', { sql: 'DELETE FROM users WHERE id = 1' });
+      expect(result.action).toBe('block');
+      if (result.action === 'block') {
+        expect(result.reason).toContain('non-SELECT');
+      }
+    });
+
+    it('blocks the SELECT+DROP injection pattern', () => {
+      const engine = makeEngine();
+      const result = engine.evaluate('postgres', 'query', {
+        sql: 'SELECT 1; DROP TABLE users;',
+      });
+      expect(result.action).toBe('block');
+    });
+
+    it('blocks unparseable SQL fail-closed', () => {
+      const engine = makeEngine();
+      const result = engine.evaluate('postgres', 'query', { sql: 'SELEKT bogus' });
+      expect(result.action).toBe('block');
+      if (result.action === 'block') {
+        expect(result.reason).toContain('unparseable');
+      }
+    });
+
+    it('blocks when the SQL arg is missing from args', () => {
+      const engine = makeEngine();
+      const result = engine.evaluate('postgres', 'query', { notsql: 'SELECT 1' });
+      expect(result.action).toBe('block');
+    });
+
+    it('uses a custom sqlArg when configured', () => {
+      const engine = makeEngine('statement');
+      expect(
+        engine.evaluate('postgres', 'query', { statement: 'SELECT * FROM t' }),
+      ).toEqual({ action: 'allow' });
+      // With a custom arg name, the default 'sql' arg should be ignored
+      const wrongArg = engine.evaluate('postgres', 'query', { sql: 'SELECT * FROM t' });
+      expect(wrongArg.action).toBe('block');
+    });
+
+    it('uses a custom reason when configured', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{
+          name: 'postgres', transport: 'stdio', command: 'npx', args: [],
+          tools: {
+            query: {
+              action: 'sql-read-only',
+              sqlArg: 'sql',
+              reason: 'Analytics DB is read-only by policy.',
+            },
+          },
+        }],
+      }));
+      const result = engine.evaluate('postgres', 'query', { sql: 'INSERT INTO t VALUES (1)' });
+      expect(result).toEqual({ action: 'block', reason: 'Analytics DB is read-only by policy.' });
+    });
+  });
+
+  describe('sql-approve-writes policy', () => {
+    function makeEngine() {
+      return new PolicyEngine(makeConfig({
+        servers: [{
+          name: 'postgres', transport: 'stdio', command: 'npx', args: [],
+          tools: {
+            query: 'sql-approve-writes',
+          },
+        }],
+      }));
+    }
+
+    it('allows a SELECT', () => {
+      const engine = makeEngine();
+      expect(
+        engine.evaluate('postgres', 'query', { sql: 'SELECT * FROM users' }),
+      ).toEqual({ action: 'allow' });
+    });
+
+    it('requires approval for UPDATE', () => {
+      const engine = makeEngine();
+      expect(
+        engine.evaluate('postgres', 'query', { sql: "UPDATE users SET name = 'alice' WHERE id = 1" }),
+      ).toEqual({ action: 'approve' });
+    });
+
+    it('requires approval for DELETE', () => {
+      const engine = makeEngine();
+      expect(
+        engine.evaluate('postgres', 'query', { sql: 'DELETE FROM sessions' }),
+      ).toEqual({ action: 'approve' });
+    });
+
+    it('requires approval for DROP (DDL)', () => {
+      const engine = makeEngine();
+      expect(
+        engine.evaluate('postgres', 'query', { sql: 'DROP TABLE users' }),
+      ).toEqual({ action: 'approve' });
+    });
+
+    it('blocks unparseable SQL (nothing safe to approve)', () => {
+      const engine = makeEngine();
+      const result = engine.evaluate('postgres', 'query', { sql: 'SELEKT garbled' });
+      expect(result.action).toBe('block');
+      if (result.action === 'block') {
+        expect(result.reason).toContain('nothing to approve');
+      }
+    });
+  });
+
   describe('hidden policy', () => {
     it('isHidden returns true for server-level hidden policy', () => {
       const engine = new PolicyEngine(makeConfig({

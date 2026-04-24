@@ -217,6 +217,25 @@ For tools the model should never even see — not just rejected on call, but fil
 }
 ```
 
+### SQL-Aware Policies
+
+For database MCP servers where a single tool takes arbitrary SQL (Postgres, SQLite, BigQuery, etc.), tool-name heuristics aren't precise enough — the name `query` doesn't tell you whether the agent's about to `SELECT` or `DROP TABLE`. Cordon ships two policies that parse the SQL itself and decide based on the statement type.
+
+```typescript
+tools: {
+  // Allow SELECTs (including CTEs that wrap a SELECT). Block everything else.
+  query: 'sql-read-only',
+
+  // Reads pass; writes (INSERT/UPDATE/DELETE/DROP/ALTER/...) pause for human approval.
+  execute: 'sql-approve-writes',
+
+  // When the tool takes SQL in a different arg name:
+  run: { action: 'sql-read-only', sqlArg: 'statement' },
+}
+```
+
+Both policies use the PostgreSQL dialect by default (others coming later) and are fail-closed: unparseable SQL is blocked rather than allowed. Prompt-injection patterns like `SELECT 1; DROP TABLE users;` and block-comment-wrapped keywords are correctly classified as writes by the AST parser.
+
 ### Closed-World Tool Catalogs
 
 Declare the exact tool surface your upstream server is expected to advertise. When the upstream adds a new tool in a future release, Cordon blocks it automatically until you explicitly promote it.
@@ -265,6 +284,8 @@ Your LLM client and MCP servers don't change at all. `cordon init` handles the c
 | `read-only` | All write operations are blocked |
 | `log-only` | Pass through but flagged in the audit log |
 | `hidden` | Filtered from tools/list — the model never sees it |
+| `sql-read-only` | Parse the SQL arg, allow SELECT/WITH-SELECT, block everything else (fail-closed on unparseable) |
+| `sql-approve-writes` | Parse the SQL arg, allow reads, pause writes for human approval, block unparseable |
 
 Policies can be set at the server level (default for all tools) or per-tool (overrides the server default):
 
@@ -314,6 +335,7 @@ Policies can be set at the server level (default for all tools) or per-tool (ove
 - [x] MCP proxy with aggregator model (multiple servers, one gateway)
 - [x] Policy engine — allow, block, approve, approve-writes, read-only, log-only, hidden
 - [x] Closed-world tool catalogs — `knownTools` + `onUnknownTool` for future-proof upstream surface control
+- [x] SQL-aware policies — `sql-read-only` / `sql-approve-writes` parse SQL arguments at call time (PostgreSQL dialect)
 - [x] Terminal approval channel with TTY-safe prompt
 - [x] Slack approval channel — Block Kit messages, polls for response
 - [x] Structured JSON audit logging to stdout, file, or hosted dashboard

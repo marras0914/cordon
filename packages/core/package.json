@@ -1,6 +1,6 @@
 {
   "name": "@getcordon/core",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Core proxy engine for Cordon — the security gateway for AI agents",
   "author": "marras0914",
   "license": "MIT",
@@ -46,13 +46,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.11.0",
     "cordon-sdk": "*",
-    "@modelcontextprotocol/sdk": "^1.11.0"
+    "node-sql-parser": "^5.4.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "^5.6.0",
     "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   }
 }

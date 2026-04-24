@@ -1,4 +1,5 @@
 import type { PolicyAction, ResolvedConfig, ToolPolicy } from 'cordon-sdk';
+import { classifySql } from './sql-classifier.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,18 @@ function isWriteOperation(toolName: string): boolean {
   );
 }
 
+/**
+ * Extract the named SQL arg from a tool call's arguments object and
+ * classify it. Returns `'unknown'` when the arg is missing or isn't a
+ * string — SQL policies treat `'unknown'` as fail-closed.
+ */
+function classifyCallArg(args: unknown, sqlArg: string): 'read' | 'write' | 'unknown' {
+  if (!args || typeof args !== 'object' || Array.isArray(args)) return 'unknown';
+  const value = (args as Record<string, unknown>)[sqlArg];
+  if (typeof value !== 'string') return 'unknown';
+  return classifySql(value);
+}
+
 // ── Engine ────────────────────────────────────────────────────────────────────
 
 export class PolicyEngine {
@@ -62,16 +75,21 @@ export class PolicyEngine {
     }
   }
 
-  evaluate(serverName: string, toolName: string): PolicyDecision {
+  /**
+   * Evaluate a tool call. Pass `args` for policies that inspect tool-call
+   * arguments (e.g. `sql-read-only`, `sql-approve-writes`). Omitting args
+   * is fine for policies that don't consult them.
+   */
+  evaluate(serverName: string, toolName: string, args?: unknown): PolicyDecision {
     // Tool-level policy takes highest precedence
     const toolPolicy = this.toolPolicies.get(`${serverName}/${toolName}`);
     if (toolPolicy !== undefined) {
-      return this.resolve(toolPolicy, toolName);
+      return this.resolve(toolPolicy, toolName, args);
     }
 
     // Server-level policy (default: allow)
     const serverPolicy = this.serverPolicies.get(serverName) ?? 'allow';
-    return this.resolve(serverPolicy, toolName);
+    return this.resolve(serverPolicy, toolName, args);
   }
 
   /**
@@ -90,9 +108,10 @@ export class PolicyEngine {
     return this.serverPolicies.get(serverName) === 'hidden';
   }
 
-  private resolve(policy: ToolPolicy, toolName: string): PolicyDecision {
+  private resolve(policy: ToolPolicy, toolName: string, args?: unknown): PolicyDecision {
     const action = typeof policy === 'string' ? policy : policy.action;
     const customReason = typeof policy === 'object' ? policy.reason : undefined;
+    const sqlArg = typeof policy === 'object' ? policy.sqlArg ?? 'sql' : 'sql';
 
     switch (action) {
       case 'allow':
@@ -133,6 +152,32 @@ export class PolicyEngine {
             customReason ??
             `Tool '${toolName}' is not exposed to clients (policy: hidden)`,
         };
+
+      case 'sql-read-only': {
+        const classification = classifyCallArg(args, sqlArg);
+        if (classification === 'read') return { action: 'allow' };
+        return {
+          action: 'block',
+          reason:
+            customReason ??
+            (classification === 'write'
+              ? `SQL read-only policy: '${toolName}' received a non-SELECT statement; blocked`
+              : `SQL read-only policy: '${toolName}' received unparseable SQL in arg '${sqlArg}'; blocked (fail-closed)`),
+        };
+      }
+
+      case 'sql-approve-writes': {
+        const classification = classifyCallArg(args, sqlArg);
+        if (classification === 'read') return { action: 'allow' };
+        if (classification === 'write') return { action: 'approve' };
+        // Unparseable SQL: can't know what we'd be approving. Fail closed.
+        return {
+          action: 'block',
+          reason:
+            customReason ??
+            `SQL approve-writes policy: '${toolName}' received unparseable SQL in arg '${sqlArg}'; blocked (fail-closed, nothing to approve)`,
+        };
+      }
 
       default:
         // Fail secure: block unknown policy actions rather than silently allowing

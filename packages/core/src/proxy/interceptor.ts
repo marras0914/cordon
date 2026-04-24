@@ -58,8 +58,8 @@ export class Interceptor {
       return errorResult('Rate limit exceeded');
     }
 
-    // 3. Policy
-    const decision = this.policy.evaluate(serverName, originalName);
+    // 3. Policy — args are consulted by sql-read-only / sql-approve-writes
+    const decision = this.policy.evaluate(serverName, originalName, args);
 
     if (decision.action === 'block') {
       this.audit.log({
