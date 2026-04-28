@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { setState } from '../cli-state.js';
+import { setState, getAuth } from '../cli-state.js';
 
 const DASHBOARD_URL = 'https://cordon-server-production.up.railway.app/dashboard/';
 
@@ -121,6 +121,18 @@ export async function initCommand(): Promise<void> {
     //   policy: 'allow',
     // },`;
 
+  const auth = getAuth();
+  const auditBlock = auth
+    ? `audit: {
+    enabled: true,
+    output: 'hosted',
+    // endpoint + apiKey are auto-loaded from ~/.cordon/auth.json (cordon login)
+  },`
+    : `audit: {
+    enabled: true,
+    output: 'stdout',
+  },`;
+
   const content = `import { defineConfig } from 'cordon-sdk';
 
 export default defineConfig({
@@ -128,10 +140,7 @@ export default defineConfig({
 ${serverBlocks}
   ],
 
-  audit: {
-    enabled: true,
-    output: 'stdout',
-  },
+  ${auditBlock}
 
   approvals: {
     channel: 'terminal',
@@ -192,9 +201,16 @@ ${serverBlocks}
     );
   }
 
-  process.stderr.write(
-    `\n\x1b[36mWant centralized audit logs + Slack approvals?\x1b[0m\n` +
-    `Register a free account at ${DASHBOARD_URL}?utm_source=cli_init\n`,
-  );
+  if (auth) {
+    process.stderr.write(
+      `\n\x1b[32m✓\x1b[0m audit logs will stream to your Cordon account (${auth.endpoint})\n`,
+    );
+  } else {
+    process.stderr.write(
+      `\n\x1b[36mWant centralized audit logs + Slack approvals?\x1b[0m\n` +
+      `Run \x1b[36mcordon login\x1b[0m to register a free account, ` +
+      `or sign up at ${DASHBOARD_URL}?utm_source=cli_init\n`,
+    );
+  }
   setState({ welcomed: true });
 }

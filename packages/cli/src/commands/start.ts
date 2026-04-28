@@ -1,19 +1,38 @@
 import { CordonGateway } from '@getcordon/core';
 import type { ResolvedConfig } from 'cordon-sdk';
 import { emptyConfig, findConfigPath, loadConfig } from '../config-loader.js';
-import { getState, setState } from '../cli-state.js';
+import { getState, setState, getAuth } from '../cli-state.js';
 
 const DASHBOARD_URL = 'https://cordon-server-production.up.railway.app/dashboard/';
+
+function applyAuthDefaults(config: ResolvedConfig): ResolvedConfig {
+  const auth = getAuth();
+  if (!auth) return config;
+
+  const audit = config.audit;
+  const usesHosted = audit && (audit.output === 'hosted' || (Array.isArray(audit.output) && audit.output.includes('hosted')));
+  if (!usesHosted) return config;
+  if (audit.endpoint && audit.apiKey) return config;
+
+  return {
+    ...config,
+    audit: {
+      ...audit,
+      endpoint: audit.endpoint ?? auth.endpoint,
+      apiKey: audit.apiKey ?? auth.apiKey,
+    },
+  };
+}
 
 interface StartOptions {
   config?: string;
 }
 
 export async function startCommand(options: StartOptions): Promise<void> {
-  if (!getState().welcomed) {
+  if (!getState().welcomed && !getAuth()) {
     process.stderr.write(
       `\n\x1b[36m[cordon] Want centralized audit logs + Slack approvals?\x1b[0m\n` +
-      `[cordon] Register at ${DASHBOARD_URL}?utm_source=cli_start\n\n`,
+      `[cordon] Run \`cordon login\` or register at ${DASHBOARD_URL}?utm_source=cli_start\n\n`,
     );
     setState({ welcomed: true });
   }
@@ -46,6 +65,8 @@ export async function startCommand(options: StartOptions): Promise<void> {
       process.exit(1);
     }
   }
+
+  config = applyAuthDefaults(config);
 
   const gateway = new CordonGateway(config);
 
