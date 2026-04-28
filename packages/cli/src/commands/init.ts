@@ -102,9 +102,9 @@ export async function initCommand(): Promise<void> {
               ? `, env: ${JSON.stringify(cfg.env)}`
             : '';
           return `    {
-      name: '${name}',
+      name: ${JSON.stringify(name)},
       transport: 'stdio',
-      command: '${cfg.command}'${argsStr}${envStr},
+      command: ${JSON.stringify(cfg.command)}${argsStr}${envStr},
       policy: 'allow',
       // tools: {
       //   execute: 'approve',
@@ -173,10 +173,17 @@ ${serverBlocks}
       },
     };
 
-    // Backup the original
+    // Backup the original — only if no backup exists yet, so re-running init
+    // never overwrites the user's true pre-cordon config.
     const backupPath = `${claudePath}.cordon-backup`;
-    writeFileSync(backupPath, readFileSync(claudePath, 'utf8'), 'utf8');
-    process.stderr.write(`\x1b[32m✓\x1b[0m backed up Claude Desktop config to ${backupPath}\n`);
+    if (existsSync(backupPath)) {
+      process.stderr.write(
+        `[cordon] existing backup at ${backupPath} preserved (won't overwrite)\n`,
+      );
+    } else {
+      writeFileSync(backupPath, readFileSync(claudePath, 'utf8'), 'utf8');
+      process.stderr.write(`\x1b[32m✓\x1b[0m backed up Claude Desktop config to ${backupPath}\n`);
+    }
 
     writeFileSync(claudePath, JSON.stringify(newClaudeConfig, null, 2), 'utf8');
     process.stderr.write(`\x1b[32m✓\x1b[0m patched Claude Desktop config\n`);
