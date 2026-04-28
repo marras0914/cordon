@@ -1,4 +1,5 @@
-import { Parser } from 'node-sql-parser';
+import pkg from 'node-sql-parser';
+const { Parser } = pkg;
 
 /**
  * Classification of a SQL string for policy enforcement.
