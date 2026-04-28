@@ -1,12 +1,23 @@
 import { CordonGateway } from '@getcordon/core';
 import type { ResolvedConfig } from 'cordon-sdk';
 import { emptyConfig, findConfigPath, loadConfig } from '../config-loader.js';
+import { getState, setState } from '../cli-state.js';
+
+const DASHBOARD_URL = 'https://cordon-server-production.up.railway.app/dashboard/';
 
 interface StartOptions {
   config?: string;
 }
 
 export async function startCommand(options: StartOptions): Promise<void> {
+  if (!getState().welcomed) {
+    process.stderr.write(
+      `\n\x1b[36m[cordon] Want centralized audit logs + Slack approvals?\x1b[0m\n` +
+      `[cordon] Register at ${DASHBOARD_URL}?utm_source=cli_start\n\n`,
+    );
+    setState({ welcomed: true });
+  }
+
   // Default to an empty server list so auto-install probes (Glama, MCP
   // registry, fresh `npx -y cordon-cli start`) succeed instead of crashing.
   // Real users get a loud stderr warning so they don't silently run a no-op.

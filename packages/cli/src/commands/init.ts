@@ -2,6 +2,9 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { setState } from '../cli-state.js';
+
+const DASHBOARD_URL = 'https://cordon-server-production.up.railway.app/dashboard/';
 
 function ensureCordonSdkInstalled(cwd: string): void {
   // Config imports from 'cordon-sdk', and jiti resolves it from the config
@@ -188,4 +191,10 @@ ${serverBlocks}
       `\nEdit cordon.config.ts to add your MCP servers, then run \x1b[36mnpx cordon start\x1b[0m.\n`,
     );
   }
+
+  process.stderr.write(
+    `\n\x1b[36mWant centralized audit logs + Slack approvals?\x1b[0m\n` +
+    `Register a free account at ${DASHBOARD_URL}?utm_source=cli_init\n`,
+  );
+  setState({ welcomed: true });
 }
