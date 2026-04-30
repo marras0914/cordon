@@ -1,8 +1,8 @@
 {
   "name": "cordon-cli",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "mcpName": "io.github.marras0914/cordon",
-  "description": "The security gateway for AI agents — firewall, auditor, and remote control for MCP tool calls",
+  "description": "Cordon for MCP — security gateway for MCP tool calls. Firewall, auditor, and human-in-the-loop approvals over any stdio MCP server.",
   "author": "marras0914",
   "license": "MIT",
   "homepage": "https://getcordon.com",

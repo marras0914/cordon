@@ -1,9 +1,9 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.marras0914/cordon",
-  "title": "Cordon",
-  "description": "Security gateway for MCP. Policy enforcement, audit logging, human-in-the-loop approvals.",
-  "version": "0.1.10",
+  "title": "Cordon for MCP",
+  "description": "Cordon for MCP. Security gateway for MCP tool calls — policy enforcement, audit logging, human-in-the-loop approvals.",
+  "version": "0.1.17",
   "websiteUrl": "https://getcordon.com",
   "repository": {
     "url": "https://github.com/marras0914/cordon",
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "cordon-cli",
-      "version": "0.1.10",
+      "version": "0.1.17",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

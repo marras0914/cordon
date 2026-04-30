@@ -1,6 +1,6 @@
 # cordon-sdk
 
-TypeScript SDK for configuring [Cordon](https://github.com/marras0914/cordon), the security gateway for MCP tool calls.
+TypeScript SDK for configuring [Cordon for MCP](https://github.com/marras0914/cordon), the security gateway for MCP tool calls.
 
 This package exports `defineConfig` and the config type surface. You only need it if you're writing a `cordon.config.ts` file.
 

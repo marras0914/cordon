@@ -1,6 +1,6 @@
 # cordon-cli
 
-The command-line interface for [Cordon](https://github.com/marras0914/cordon), the security gateway for MCP tool calls.
+The command-line interface for [Cordon for MCP](https://github.com/marras0914/cordon), the security gateway for MCP tool calls.
 
 ## Install
 

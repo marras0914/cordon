@@ -1,6 +1,6 @@
 # @getcordon/core
 
-Core proxy engine for [Cordon](https://github.com/marras0914/cordon), the security gateway for MCP tool calls.
+Core proxy engine for [Cordon for MCP](https://github.com/marras0914/cordon), the security gateway for MCP tool calls.
 
 Most users won't install this directly — it's a dependency of `cordon-cli`. Install this package when you want to embed Cordon programmatically rather than run it via the CLI.
 
