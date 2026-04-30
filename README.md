@@ -1,8 +1,13 @@
 <p align="center">
-  <strong>Cordon</strong>
+  <strong>Cordon for MCP</strong>
 </p>
 
-<h3 align="center">The Security Gateway for AI Agents</h3>
+<h3 align="center">The Security Gateway for MCP Tool Calls</h3>
+
+<p align="center">
+  <a href="https://getcordon.com">Website</a> •
+  <a href="https://dev.to/marras0914/mcp-has-no-security-model-heres-how-to-fix-it-in-2-minutes-5f7o">Writeup</a>
+</p>
 
 <p align="center">
   <a href="#quickstart">Quickstart</a> •
@@ -24,6 +29,10 @@
 > Every company wants to deploy AI agents. No company is willing to give an agent the keys to their database.
 >
 > **Cordon closes the trust gap.**
+
+<p align="center">
+  <em>From the maintainer of <a href="https://www.npmjs.com/package/agent-toolbelt">Agent Toolbelt</a> — 25+ MCP tools, ~1,600 weekly npm downloads.</em>
+</p>
 
 ---
 
@@ -363,11 +372,11 @@ npm run demo
 
 ## Use Cases
 
-**Solo Developer** — Secure your local Claude/Cursor setup. See exactly what your agent is calling and block anything dangerous before it reaches production.
+**Enterprise** — Centralized governance across all AI agent deployments. Policy-as-code, structured logs, and a clear path to SOC2-ready audit trails.
 
 **Startup Team** — Deploy agents with confidence. Every tool call is logged, writes require approval, and your compliance team has a trail.
 
-**Enterprise** — Centralized governance across all AI agent deployments. Policy-as-code, structured logs, and a clear path to SOC2-ready audit trails.
+**Solo Developer** — Secure your local Claude/Cursor setup. See exactly what your agent is calling and block anything dangerous before it reaches production.
 
 ---
 
@@ -375,7 +384,7 @@ npm run demo
 
 - **[Agent Toolbelt](https://www.npmjs.com/package/agent-toolbelt)** — a typed toolkit of ready-made MCP tools (web search, fetch, filesystem, and more). Wire it into Claude Desktop, then route those tool calls through Cordon for policy enforcement and audit logging. Agent Toolbelt gives your agents power; Cordon makes sure they ask before using it.
 
-- **Build & Ship MCP Tools** — the companion course that walks through building your own MCP servers end to end. Module 6 covers securing your server with Cordon. <!-- TODO: add course URL once live -->
+- **[Build & Ship MCP Tools](https://build-mcp-tools.vercel.app/)** — the companion course that walks through building your own MCP servers end to end. 7 modules, 33 lessons; Module 0 is free, Module 6 covers securing your server with Cordon.
 
 ---
 
