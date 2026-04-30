@@ -156,19 +156,36 @@ ${serverBlocks}
   // resolve it when `cordon start` runs.
   ensureCordonSdkInstalled(process.cwd());
 
-  // Patch Claude Desktop config to route through cordon
+  // Patch Claude Desktop config to route through cordon.
+  //
+  // We bind the spawn to the *exact* node + cordon.js paths that ran this
+  // init. Earlier versions wrote `npx.cmd` (or `npx`), which relies on
+  // PATH lookup at spawn time. Claude Desktop's spawned subprocesses
+  // inherit a stripped PATH on Windows that often lacks the user's
+  // nvm/Node bin dir, so `npx.cmd` fails with "is not recognized as an
+  // internal or external command". Using full paths skips PATH and the
+  // cmd.exe wrapper entirely.
   if (claudePath && servers.length > 0) {
     const cordonConfigPath = outputPath.replace(/\\/g, '/');
-    // On Windows, Claude Desktop spawns MCP servers via CreateProcess which
-    // won't auto-resolve `npx` without the .cmd extension.
-    const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+    const nodePath = process.execPath.replace(/\\/g, '/');
+    const cordonScriptPath = (process.argv[1] ?? '').replace(/\\/g, '/');
+
+    if (!cordonScriptPath) {
+      process.stderr.write(
+        `\x1b[33mwarn\x1b[0m: could not detect cordon CLI script path. ` +
+          `Skipping Claude Desktop patch.\n` +
+          `Manually add this to your claude_desktop_config.json mcpServers:\n` +
+          `  "cordon": { "command": "${nodePath}", "args": ["<path-to-cordon.js>", "start", "--config", "${cordonConfigPath}"] }\n`,
+      );
+      return;
+    }
 
     const newClaudeConfig: ClaudeDesktopConfig = {
       ...claudeConfig,
       mcpServers: {
         cordon: {
-          command: npxCommand,
-          args: ['-y', 'cordon-cli', 'start', '--config', cordonConfigPath],
+          command: nodePath,
+          args: [cordonScriptPath, 'start', '--config', cordonConfigPath],
         },
       },
     };
@@ -191,13 +208,15 @@ ${serverBlocks}
       `\n\x1b[36mRestart Claude Desktop to activate Cordon.\x1b[0m\n`,
     );
   } else if (!claudePath) {
+    const nodePath = process.execPath.replace(/\\/g, '/');
+    const cordonScriptPath = (process.argv[1] ?? '<path-to-cordon.js>').replace(/\\/g, '/');
     process.stderr.write(
       `\n\x1b[33mwarn\x1b[0m: Claude Desktop config not found on this system.\n` +
       `Edit cordon.config.ts, then manually add Cordon to your MCP client config:\n\n` +
       `  "mcpServers": {\n` +
       `    "cordon": {\n` +
-      `      "command": "${process.platform === 'win32' ? 'npx.cmd' : 'npx'}",\n` +
-      `      "args": ["-y", "cordon-cli", "start", "--config", "${outputPath.replace(/\\/g, '/')}"]\n` +
+      `      "command": "${nodePath}",\n` +
+      `      "args": ["${cordonScriptPath}", "start", "--config", "${outputPath.replace(/\\/g, '/')}"]\n` +
       `    }\n` +
       `  }\n`,
     );
