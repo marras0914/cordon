@@ -1,0 +1,29 @@
+name: Publish cordon-sdk
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Build all packages (turbo respects sdk -> core -> cli order)
+        run: npm run build
+
+      - name: Publish cordon-sdk via OIDC
+        run: npm publish --access public --provenance
+        working-directory: packages/sdk
