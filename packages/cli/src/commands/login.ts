@@ -48,7 +48,7 @@ async function listenForCallback(port: number, expectedState: string): Promise<C
       }
 
       res.writeHead(200, { 'Content-Type': 'text/html' })
-        .end('<html><body style="font-family:system-ui;padding:40px;"><h2>Logged in to Cordon</h2><p>You can close this tab and return to your terminal.</p></body></html>');
+        .end('<html><body style="font-family:system-ui;padding:40px;"><h2>Logged in to Cordon for MCP</h2><p>You can close this tab and return to your terminal.</p></body></html>');
       server.close();
       resolve({ token, state, signup });
     });
@@ -107,7 +107,7 @@ export async function loginCommand(options: LoginOptions = {}): Promise<void> {
 
   process.stderr.write(`\x1b[32m✓\x1b[0m logged in. API key saved to ~/.cordon/auth.json\n`);
   if (result.signup === 'true') {
-    process.stderr.write(`Welcome to Cordon. Run \x1b[36mcordon init\x1b[0m next to wire up your MCP servers.\n`);
+    process.stderr.write(`Welcome to Cordon for MCP. Run \x1b[36mcordon init\x1b[0m next to wire up your MCP servers.\n`);
   }
   // Suppress unused var warning when port is set but not otherwise used
   void port;

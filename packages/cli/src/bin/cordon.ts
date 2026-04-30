@@ -8,7 +8,7 @@ const program = new Command();
 
 program
   .name('cordon')
-  .description('The security gateway for AI agents')
+  .description('Cordon for MCP — security gateway for MCP tool calls')
   .version('0.1.0');
 
 program
