@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { setAuth } from '../cli-state.js';
 
-const DEFAULT_ENDPOINT = 'https://cordon-server-production.up.railway.app';
+const DEFAULT_ENDPOINT = 'https://app.getcordon.com';
 const PORT_RANGE = [53247, 53249, 53251] as const;
 const TIMEOUT_MS = 5 * 60 * 1000;
 

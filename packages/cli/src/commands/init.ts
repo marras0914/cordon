@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { setState, getAuth } from '../cli-state.js';
 
-const DASHBOARD_URL = 'https://cordon-server-production.up.railway.app/dashboard/';
+const DASHBOARD_URL = 'https://app.getcordon.com/dashboard/';
 
 function ensureCordonSdkInstalled(cwd: string): void {
   // Config imports from 'cordon-sdk', and jiti resolves it from the config

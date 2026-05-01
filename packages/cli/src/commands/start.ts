@@ -3,7 +3,7 @@ import type { ResolvedConfig } from 'cordon-sdk';
 import { emptyConfig, findConfigPath, loadConfig } from '../config-loader.js';
 import { getState, setState, getAuth } from '../cli-state.js';
 
-const DASHBOARD_URL = 'https://cordon-server-production.up.railway.app/dashboard/';
+const DASHBOARD_URL = 'https://app.getcordon.com/dashboard/';
 
 function applyAuthDefaults(config: ResolvedConfig): ResolvedConfig {
   const auth = getAuth();

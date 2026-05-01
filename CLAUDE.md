@@ -156,16 +156,16 @@ cd packages/cli  && npm version patch && npm run build && npm publish --access p
 
 ## Hosted Backend (cordon-server)
 
-Live at `https://cordon-server-production.up.railway.app` (Railway, private GitHub repo `marras0914/cordon-server`).
+Live at `https://app.getcordon.com` (Railway, private GitHub repo `marras0914/cordon-server`).
 
-Dashboard: `https://cordon-server-production.up.railway.app/dashboard/` — GitHub OAuth login, users manage their own API keys.
+Dashboard: `https://app.getcordon.com/dashboard/` — GitHub OAuth login, users manage their own API keys.
 
 To use hosted audit output:
 ```typescript
 audit: {
   enabled: true,
   output: 'hosted',
-  endpoint: 'https://cordon-server-production.up.railway.app',
+  endpoint: 'https://app.getcordon.com',
   apiKey: 'crd_...',
 }
 ```
@@ -176,7 +176,7 @@ approvals: {
   channel: 'slack',
   slackBotToken: 'xoxb-...',
   slackChannel: '#cordon-approvals',
-  endpoint: 'https://cordon-server-production.up.railway.app',
+  endpoint: 'https://app.getcordon.com',
   apiKey: 'crd_...',
   timeoutMs: 60_000,
 }

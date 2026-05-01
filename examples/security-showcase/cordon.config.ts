@@ -35,7 +35,7 @@ export default defineConfig({
     enabled: true,
     output: ["stdout", "file", "hosted"],
     filePath: join(__dirname, "cordon-audit.log"),
-    endpoint: "https://cordon-server-production.up.railway.app",
+    endpoint: "https://app.getcordon.com",
     apiKey: "crd_add6ef3ab2f04f62947667c5548f27df",
   },
 
@@ -43,7 +43,7 @@ export default defineConfig({
     channel: "slack",
     slackBotToken: process.env.SLACK_BOT_TOKEN ?? "",
     slackChannel: "#cordon-approvals",
-    endpoint: "https://cordon-server-production.up.railway.app",
+    endpoint: "https://app.getcordon.com",
     apiKey: "crd_add6ef3ab2f04f62947667c5548f27df",
     timeoutMs: 60_000,
   },
