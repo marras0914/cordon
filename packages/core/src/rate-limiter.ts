@@ -1,4 +1,4 @@
-import type { RateLimitConfig } from 'cordon-sdk';
+import type { RateLimitConfig } from '@getcordon/sdk';
 
 /**
  * Sliding-window rate limiter. Tracks call counts per minute across three

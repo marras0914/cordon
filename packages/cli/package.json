@@ -1,6 +1,6 @@
 {
-  "name": "cordon-cli",
-  "version": "0.1.19",
+  "name": "@getcordon/cli",
+  "version": "0.2.0",
   "mcpName": "io.github.marras0914/cordon",
   "description": "Cordon for MCP — security gateway for MCP tool calls. Firewall, auditor, and human-in-the-loop approvals over any stdio MCP server.",
   "author": "marras0914",
@@ -49,7 +49,7 @@
   },
   "dependencies": {
     "@getcordon/core": "*",
-    "cordon-sdk": "*",
+    "@getcordon/sdk": "*",
     "commander": "^12.1.0",
     "jiti": "^2.4.0"
   },

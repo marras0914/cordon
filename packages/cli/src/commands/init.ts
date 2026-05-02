@@ -7,10 +7,10 @@ import { setState, getAuth } from '../cli-state.js';
 const DASHBOARD_URL = 'https://app.getcordon.com/dashboard/';
 
 function ensureCordonSdkInstalled(cwd: string): void {
-  // Config imports from 'cordon-sdk', and jiti resolves it from the config
+  // Config imports from '@getcordon/sdk', and jiti resolves it from the config
   // file's directory. Without a local install, `cordon start` dies with
-  // "Cannot find module 'cordon-sdk'" even when the CLI is global.
-  if (existsSync(join(cwd, 'node_modules', 'cordon-sdk', 'package.json'))) {
+  // "Cannot find module '@getcordon/sdk'" even when the CLI is global.
+  if (existsSync(join(cwd, 'node_modules', '@getcordon/sdk', 'package.json'))) {
     return;
   }
 
@@ -23,19 +23,19 @@ function ensureCordonSdkInstalled(cwd: string): void {
     process.stderr.write(`\x1b[32m✓\x1b[0m created package.json\n`);
   }
 
-  process.stderr.write(`[cordon] installing cordon-sdk...\n`);
+  process.stderr.write(`[cordon] installing @getcordon/sdk...\n`);
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const result = spawnSync(npmCmd, ['install', 'cordon-sdk'], {
+  const result = spawnSync(npmCmd, ['install', '@getcordon/sdk'], {
     cwd,
     stdio: ['ignore', 'inherit', 'inherit'],
   });
 
   if (result.status === 0) {
-    process.stderr.write(`\x1b[32m✓\x1b[0m installed cordon-sdk\n`);
+    process.stderr.write(`\x1b[32m✓\x1b[0m installed @getcordon/sdk\n`);
   } else {
     process.stderr.write(
-      `\x1b[33mwarn\x1b[0m: could not auto-install cordon-sdk. ` +
-        `Run 'npm install cordon-sdk' in this directory before 'cordon start'.\n`,
+      `\x1b[33mwarn\x1b[0m: could not auto-install @getcordon/sdk. ` +
+        `Run 'npm install @getcordon/sdk' in this directory before 'cordon start'.\n`,
     );
   }
 }
@@ -133,7 +133,7 @@ export async function initCommand(): Promise<void> {
     output: 'stdout',
   },`;
 
-  const content = `import { defineConfig } from 'cordon-sdk';
+  const content = `import { defineConfig } from '@getcordon/sdk';
 
 export default defineConfig({
   servers: [
@@ -152,7 +152,7 @@ ${serverBlocks}
   writeFileSync(outputPath, content, 'utf8');
   process.stderr.write(`\x1b[32m✓\x1b[0m wrote cordon.config.ts\n`);
 
-  // The config imports from 'cordon-sdk'. Install it locally so jiti can
+  // The config imports from '@getcordon/sdk'. Install it locally so jiti can
   // resolve it when `cordon start` runs.
   ensureCordonSdkInstalled(process.cwd());
 

@@ -2,19 +2,19 @@
 
 Core proxy engine for [Cordon for MCP](https://github.com/marras0914/cordon), the security gateway for MCP tool calls.
 
-Most users won't install this directly — it's a dependency of `cordon-cli`. Install this package when you want to embed Cordon programmatically rather than run it via the CLI.
+Most users won't install this directly — it's a dependency of `@getcordon/cli`. Install this package when you want to embed Cordon programmatically rather than run it via the CLI.
 
 ## Install
 
 ```bash
-npm install @getcordon/core cordon-sdk
+npm install @getcordon/core @getcordon/sdk
 ```
 
 ## Programmatic usage
 
 ```typescript
 import { CordonGateway } from '@getcordon/core';
-import type { ResolvedConfig } from 'cordon-sdk';
+import type { ResolvedConfig } from '@getcordon/sdk';
 
 const config: ResolvedConfig = {
   servers: [

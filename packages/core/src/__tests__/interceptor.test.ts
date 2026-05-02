@@ -4,7 +4,7 @@ import type { AuditLogger } from '../audit/logger.js';
 import type { ApprovalManager } from '../approvals/manager.js';
 import { PolicyEngine } from '../policies/engine.js';
 import type { UpstreamManager } from '../proxy/upstream-manager.js';
-import type { ResolvedConfig } from 'cordon-sdk';
+import type { ResolvedConfig } from '@getcordon/sdk';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PolicyEngine } from '../policies/engine.js';
-import type { ResolvedConfig } from 'cordon-sdk';
+import type { ResolvedConfig } from '@getcordon/sdk';
 
 function makeConfig(overrides: Partial<ResolvedConfig> = {}): ResolvedConfig {
   return {

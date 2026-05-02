@@ -1,4 +1,4 @@
-import { defineConfig } from "cordon-sdk";
+import { defineConfig } from "@getcordon/sdk";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 

@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/npm/v/cordon-cli?style=flat-square&color=blue" alt="npm version" />
+  <img src="https://img.shields.io/npm/v/@getcordon/cli?style=flat-square&color=blue" alt="npm version" />
   <img src="https://img.shields.io/github/license/marras0914/cordon?style=flat-square" alt="license" />
   <img src="https://img.shields.io/github/stars/marras0914/cordon?style=flat-square" alt="stars" />
 </p>
@@ -78,7 +78,7 @@ No infrastructure changes. No rewrites. One config file.
 Run this inside your project (where your `claude_desktop_config.json` exists):
 
 ```bash
-npx cordon-cli init
+npx @getcordon/cli init
 ```
 
 This reads your existing Claude Desktop MCP config, generates `cordon.config.ts`, and patches Claude Desktop to route all tool calls through Cordon.
@@ -86,7 +86,7 @@ This reads your existing Claude Desktop MCP config, generates `cordon.config.ts`
 **Step 2 — Start**
 
 ```bash
-npx cordon-cli start
+npx @getcordon/cli start
 ```
 
 Cordon starts, connects to your MCP servers, and begins intercepting tool calls. Restart Claude Desktop and every tool call now flows through the gateway.
@@ -96,14 +96,14 @@ Cordon starts, connects to your MCP servers, and begins intercepting tool calls.
 If you prefer to configure manually, install globally and create a config:
 
 ```bash
-npm install -g cordon-cli
+npm install -g @getcordon/cli
 cordon init
 ```
 
 `cordon init` generates a `cordon.config.ts`:
 
 ```typescript
-import { defineConfig } from 'cordon-sdk';
+import { defineConfig } from '@getcordon/sdk';
 
 export default defineConfig({
   servers: [
@@ -393,8 +393,8 @@ Policies can be set at the server level (default for all tools) or per-tool (ove
 
 | Package | Description |
 |---|---|
-| `cordon-cli` | The CLI — `npx cordon-cli start` |
-| `cordon-sdk` | TypeScript config SDK — `defineConfig()` and all types |
+| `@getcordon/cli` | The CLI — `npx @getcordon/cli start` |
+| `@getcordon/sdk` | TypeScript config SDK — `defineConfig()` and all types |
 | `@getcordon/core` | Core proxy engine — policy evaluator, audit logger, approval manager |
 
 ---

@@ -4,7 +4,7 @@ import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import type { ResolvedConfig } from 'cordon-sdk';
+import type { ResolvedConfig } from '@getcordon/sdk';
 import { AuditLogger } from './audit/logger.js';
 import { ApprovalManager } from './approvals/manager.js';
 import { PolicyEngine } from './policies/engine.js';

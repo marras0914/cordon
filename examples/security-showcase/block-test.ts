@@ -15,7 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // but still blocks drop_table and delete_file. Adds a call-graph rule
 // (read_data → write_file) so we can verify chain-aware blocking.
 const tempConfig = `
-import { defineConfig } from 'cordon-sdk';
+import { defineConfig } from '@getcordon/sdk';
 import { join } from 'node:path';
 export default defineConfig({
   agentId: 'showcase-agent',

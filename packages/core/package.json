@@ -1,6 +1,6 @@
 {
   "name": "@getcordon/core",
-  "version": "0.2.8",
+  "version": "0.3.0",
   "description": "Core proxy engine for Cordon for MCP — the security gateway for MCP tool calls",
   "author": "marras0914",
   "license": "MIT",
@@ -47,7 +47,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.11.0",
-    "cordon-sdk": "*",
+    "@getcordon/sdk": "*",
     "node-sql-parser": "^5.4.0"
   },
   "devDependencies": {

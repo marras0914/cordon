@@ -1,11 +1,11 @@
-# cordon-cli
+# @getcordon/cli
 
 The command-line interface for [Cordon for MCP](https://github.com/marras0914/cordon), the security gateway for MCP tool calls.
 
 ## Install
 
 ```bash
-npm install -g cordon-cli
+npm install -g @getcordon/cli
 ```
 
 ## Quickstart
@@ -31,7 +31,7 @@ Restart Claude Desktop after `cordon init`. Every MCP tool call now flows throug
 ## Config example
 
 ```typescript
-import { defineConfig } from 'cordon-sdk';
+import { defineConfig } from '@getcordon/sdk';
 
 export default defineConfig({
   servers: [

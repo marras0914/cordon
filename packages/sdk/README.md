@@ -1,4 +1,4 @@
-# cordon-sdk
+# @getcordon/sdk
 
 TypeScript SDK for configuring [Cordon for MCP](https://github.com/marras0914/cordon), the security gateway for MCP tool calls.
 
@@ -7,15 +7,15 @@ This package exports `defineConfig` and the config type surface. You only need i
 ## Install
 
 ```bash
-npm install cordon-sdk
+npm install @getcordon/sdk
 ```
 
-`cordon init` (from the `cordon-cli` package) installs this automatically into your project.
+`cordon init` (from the `@getcordon/cli` package) installs this automatically into your project.
 
 ## Usage
 
 ```typescript
-import { defineConfig } from 'cordon-sdk';
+import { defineConfig } from '@getcordon/sdk';
 
 export default defineConfig({
   servers: [

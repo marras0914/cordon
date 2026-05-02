@@ -13,7 +13,7 @@
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
-      "identifier": "cordon-cli",
+      "identifier": "@getcordon/cli",
       "version": "0.1.17",
       "runtimeHint": "npx",
       "transport": {

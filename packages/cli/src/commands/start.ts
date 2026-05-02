@@ -1,5 +1,5 @@
 import { CordonGateway } from '@getcordon/core';
-import type { ResolvedConfig } from 'cordon-sdk';
+import type { ResolvedConfig } from '@getcordon/sdk';
 import { emptyConfig, findConfigPath, loadConfig } from '../config-loader.js';
 import { getState, setState, getAuth } from '../cli-state.js';
 
@@ -38,7 +38,7 @@ export async function startCommand(options: StartOptions): Promise<void> {
   }
 
   // Default to an empty server list so auto-install probes (Glama, MCP
-  // registry, fresh `npx -y cordon-cli start`) succeed instead of crashing.
+  // registry, fresh `npx -y @getcordon/cli start`) succeed instead of crashing.
   // Real users get a loud stderr warning so they don't silently run a no-op.
   let config: ResolvedConfig = emptyConfig();
   let configPath: string | null = null;
