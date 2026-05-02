@@ -12,11 +12,13 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Write a temp config that uses 'allow' as default (no approval prompts)
-// but still blocks drop_table and delete_file
+// but still blocks drop_table and delete_file. Adds a call-graph rule
+// (read_data → write_file) so we can verify chain-aware blocking.
 const tempConfig = `
 import { defineConfig } from 'cordon-sdk';
 import { join } from 'node:path';
 export default defineConfig({
+  agentId: 'showcase-agent',
   servers: [{
     name: 'demo-db',
     transport: 'stdio',
@@ -28,6 +30,9 @@ export default defineConfig({
       delete_file: { action: 'block', reason: 'File deletion requires manual ops' },
     },
   }],
+  callGraph: [
+    { from: 'read_data', to: 'write_file', action: 'block', reason: 'No file writes after database reads.' },
+  ],
   audit: { enabled: false },
 });
 `;
@@ -45,12 +50,19 @@ const client = new Client({ name: 'block-test', version: '0.1.0' });
 await client.connect(transport);
 transport.stderr?.pipe(process.stderr);
 
+// Sequencing matters: lastToolName advances on every successful call, so
+// the call-graph case at the end requires read_data immediately preceding
+// write_file. Calls 1–5 verify per-tool blocks. Calls 6–7 verify the
+// call-graph rule fires only on the second call of the read→write pair.
 const tests = [
   { tool: 'read_data',    args: { table: 'users' },             expectBlocked: false },
   { tool: 'execute_sql',  args: { query: 'SELECT 1' },          expectBlocked: false },
-  { tool: 'write_file',   args: { path: '/tmp/x', content: 'y' }, expectBlocked: false },
+  { tool: 'write_file',   args: { path: '/tmp/x', content: 'y' }, expectBlocked: false }, // last was execute_sql, rule doesn't match
   { tool: 'drop_table',   args: { table: 'users' },             expectBlocked: true  },
   { tool: 'delete_file',  args: { path: '/etc/passwd' },        expectBlocked: true  },
+  // call-graph: a clean read_data, then a write_file — chain blocked.
+  { tool: 'read_data',    args: { table: 'customers' },         expectBlocked: false },
+  { tool: 'write_file',   args: { path: '/tmp/exfil', content: 'data' }, expectBlocked: true },
 ];
 
 let failures = 0;

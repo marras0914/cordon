@@ -6,6 +6,11 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  // Optional identity for this Cordon process. Surfaced in audit logs and
+  // intended (with HTTP/SSE transport, coming next) to scope policies per
+  // agent on a multi-agent gateway. In stdio mode, one process == one agent.
+  agentId: "showcase-agent",
+
   servers: [
     {
       name: "demo-db",
@@ -28,6 +33,24 @@ export default defineConfig({
           reason: "File deletion requires a manual ops process, not an agent.",
         },
       },
+    },
+  ],
+
+  // Call-graph rules — applied additively on top of per-tool policies.
+  // A rule only takes effect when its action raises severity over the base
+  // (severity: allow < approve < block). Multi-rule matches resolve by
+  // highest severity.
+  callGraph: [
+    {
+      // Classic exfil shape: read sensitive data, then write it to disk
+      // (or to anywhere a write_* tool could send it). Even though
+      // write_file already requires approval under approve-writes, this
+      // rule blocks the *sequence* outright — a stricter ratchet on the
+      // approval workflow.
+      from: "read_data",
+      to: "write_file",
+      action: "block",
+      reason: "No file writes after database reads — exfil-shaped.",
     },
   ],
 
