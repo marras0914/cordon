@@ -262,6 +262,66 @@ Declare the exact tool surface your upstream server is expected to advertise. Wh
 
 If the next Postgres MCP release adds `truncate_table`, Cordon blocks it with a stderr warning — no policy update needed. Leave `knownTools` undefined for backwards-compatible open-world behavior.
 
+### Per-Agent Policies + Call-Graph Constraints
+
+Per-tool policies catch dangerous *individual* calls. Call-graph rules catch dangerous *sequences* — combinations of allowed tools used in unintended order. The classic example: an agent reads sensitive data with `read_data` (allowed) and then writes it to disk with `write_file` (also allowed). Each call is fine in isolation. The *sequence* is the problem.
+
+Cordon's call-graph rules apply on top of your per-tool policy and are **additive** — they can only raise severity, never lower it.
+
+```typescript
+export default defineConfig({
+  // Optional identity for this Cordon process. Surfaced in audit logs.
+  agentId: 'et-acquisition-agent',
+
+  servers: [{
+    name: 'demo-db',
+    transport: 'stdio',
+    command: 'npx',
+    args: ['-y', '@my-org/db-mcp'],
+    policy: 'approve-writes',
+  }],
+
+  callGraph: [
+    // Reading data and then writing to disk is the exfil shape — block it,
+    // even though write_file would only require approval on its own.
+    { from: 'read_data', to: 'write_file', action: 'block',
+      reason: 'No file writes after database reads.' },
+
+    // Glob matching: any send_* tool right after a database read needs human approval.
+    { from: 'read_data', to: 'send_*', action: 'approve' },
+
+    // `*` matches anything: after a privileged read, every next call must be approved.
+    { from: 'sensitive_read', to: '*', action: 'approve' },
+  ],
+});
+```
+
+**How rules combine with per-tool policies (additive severity):**
+
+Severity ordering: `allow` < `approve` < `block`.
+
+A call-graph rule only takes effect if its action is *higher* severity than the per-tool decision. That means:
+
+- A rule with `action: 'block'` overrides an `allow` per-tool policy ✓
+- A rule with `action: 'approve'` overrides `allow`, but **doesn't** lower a `block` ✓
+- A rule with `action: 'allow'` never weakens a stricter base — it's a no-op
+- When multiple rules match, the highest-severity one wins (config order doesn't matter)
+
+One-way ratchet — tighten only, never loosen.
+
+**Audit log gains chain context.** Every `tool_call_received` event now carries `previousTool` (what was last successfully executed). Blocked / approval-required events also include `callGraphRule: { from, to }` when a rule fired:
+
+```json
+{"event":"tool_call_received","toolName":"write_file","previousTool":"read_data","..."}
+{"event":"tool_call_blocked","toolName":"write_file","reason":"No file writes after database reads.","previousTool":"read_data","callGraphRule":{"from":"read_data","to":"write_file"},"..."}
+```
+
+**v1 scoping (read this if you're shipping per-agent policies in production):**
+
+In stdio mode, one Cordon process serves one agent — so `agentId` identifies *this deployment*, not a per-call runtime identity. Every spawned Cordon process is one agent. The HTTP/SSE multi-agent gateway (where one Cordon instance can host many agents with distinct policies) is queued immediately after this — `agentId` will gain an HTTP-header source then, no config rewrite needed.
+
+`lastTool` advances **only on a clean upstream return**. Blocked, denied, and transport-failed calls don't advance the chain. v1 doesn't catch probing — an adversary that attempts `fs:delete` (blocked) and then `http:post` will see `http:post` evaluated against whatever came before the probe, not the probe itself. We chose this on purpose: tracking every blocked attempt false-positives too aggressively on legitimate flows that get blocked once and continue. Revisit when there's real adversarial-misuse data.
+
 ---
 
 ## How It Works
@@ -350,11 +410,11 @@ Policies can be set at the server level (default for all tools) or per-tool (ove
 - [x] Structured JSON audit logging to stdout, file, or hosted dashboard
 - [x] `cordon init` — auto-reads Claude Desktop config and patches it
 - [x] Rate limiting — sliding window, global / per-server / per-tool
-- [x] Hosted dashboard — audit log history, CSV/JSON export, GitHub OAuth
-- [x] Stripe billing — Free and Pro tiers
+- [x] Hosted dashboard — audit log history, CSV/JSON export, GitHub OAuth, free for individuals
+- [x] Per-agent policies + call-graph constraints — sequence-aware blocking with additive severity *(in `main`; ships in v0.2.0)*
+- [ ] HTTP/SSE transport support — multi-agent gateway, per-call `agentId` from headers
 - [ ] OpenTelemetry export
 - [ ] Team accounts and centralized governance
-- [ ] HTTP/SSE transport support
 
 ---
 
