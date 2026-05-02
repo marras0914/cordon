@@ -6,6 +6,8 @@ export type {
   StdioServerConfig,
   PolicyAction,
   ToolPolicy,
+  CallGraphAction,
+  CallGraphRule,
   ApprovalConfig,
   ApprovalChannelType,
   AuditConfig,

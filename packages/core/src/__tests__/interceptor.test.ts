@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Interceptor } from '../proxy/interceptor.js';
 import type { AuditLogger } from '../audit/logger.js';
 import type { ApprovalManager } from '../approvals/manager.js';
-import type { PolicyEngine } from '../policies/engine.js';
+import { PolicyEngine } from '../policies/engine.js';
 import type { UpstreamManager } from '../proxy/upstream-manager.js';
+import type { ResolvedConfig } from 'cordon-sdk';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -187,6 +188,197 @@ describe('Interceptor', () => {
       expect(result.isError).toBe(true);
       const text = (result.content[0] as { text: string }).text;
       expect(text).toContain('Upstream error');
+    });
+  });
+
+  // ── Call-graph integration ────────────────────────────────────────────────────
+
+  describe('call-graph integration', () => {
+    function makeConfig(overrides: Partial<ResolvedConfig> = {}): ResolvedConfig {
+      return {
+        servers: [
+          { name: 'db',  transport: 'stdio', command: 'npx', args: [], policy: 'allow' },
+          { name: 'net', transport: 'stdio', command: 'npx', args: [], policy: 'allow' },
+        ],
+        audit: { enabled: false },
+        approvals: { channel: 'terminal' },
+        ...overrides,
+      };
+    }
+
+    function upstreamFor(serverName: string, originalName: string): UpstreamManager {
+      return makeUpstream({
+        resolve: vi.fn().mockReturnValue({ serverName, originalName }),
+      });
+    }
+
+    it('end-to-end: db query → net post is blocked by a call-graph rule', async () => {
+      const policy = new PolicyEngine(makeConfig({
+        callGraph: [
+          { from: 'query', to: 'post', action: 'block', reason: 'Exfil-shaped sequence.' },
+        ],
+      }));
+      const audit = makeAudit();
+
+      // Reuse a single Interceptor across two calls; resolve returns different (server, tool) per call.
+      const upstream = makeUpstream({
+        resolve: vi.fn()
+          .mockReturnValueOnce({ serverName: 'db',  originalName: 'query' })
+          .mockReturnValueOnce({ serverName: 'net', originalName: 'post' }),
+      });
+      const interceptor = new Interceptor(upstream, policy, makeApprovals(true), audit);
+
+      const first = await interceptor.handle('query', {});
+      expect(first.isError).toBe(false);
+
+      const second = await interceptor.handle('post', { url: 'https://attacker.example.com' });
+      expect(second.isError).toBe(true);
+      const text = (second.content[0] as { text: string }).text;
+      expect(text).toContain('Exfil-shaped sequence');
+      // Upstream `post` was never called.
+      expect(upstream.callTool).toHaveBeenCalledTimes(1);
+      expect(upstream.callTool).toHaveBeenCalledWith('db', 'query', {});
+    });
+
+    it('lastToolName advances on successful call (subsequent call sees previousTool)', async () => {
+      const policy = new PolicyEngine(makeConfig());
+      const audit = makeAudit();
+      const upstream = makeUpstream({
+        resolve: vi.fn()
+          .mockReturnValueOnce({ serverName: 'db', originalName: 'query' })
+          .mockReturnValueOnce({ serverName: 'db', originalName: 'list' }),
+      });
+      const interceptor = new Interceptor(upstream, policy, makeApprovals(true), audit);
+
+      await interceptor.handle('query', {});
+      await interceptor.handle('list', {});
+
+      const receivedEvents = (audit.log as ReturnType<typeof vi.fn>).mock.calls
+        .map((c: [{ event: string; toolName?: string; previousTool?: string }]) => c[0])
+        .filter((e: { event: string }) => e.event === 'tool_call_received');
+      expect(receivedEvents).toHaveLength(2);
+      expect(receivedEvents[0].previousTool).toBeUndefined();
+      expect(receivedEvents[1].previousTool).toBe('query');
+    });
+
+    it('lastToolName does NOT advance when call is blocked', async () => {
+      const policy = new PolicyEngine(makeConfig({
+        servers: [{
+          name: 'fs', transport: 'stdio', command: 'npx', args: [],
+          tools: { delete_file: 'block' },
+        }],
+      }));
+      const audit = makeAudit();
+      const upstream = makeUpstream({
+        resolve: vi.fn()
+          .mockReturnValueOnce({ serverName: 'fs', originalName: 'delete_file' })
+          .mockReturnValueOnce({ serverName: 'fs', originalName: 'next_call' }),
+      });
+      const interceptor = new Interceptor(upstream, policy, makeApprovals(true), audit);
+
+      await interceptor.handle('delete_file', {});
+      await interceptor.handle('next_call', {});
+
+      const receivedEvents = (audit.log as ReturnType<typeof vi.fn>).mock.calls
+        .map((c: [{ event: string; previousTool?: string }]) => c[0])
+        .filter((e: { event: string }) => e.event === 'tool_call_received');
+      // Both received events should have previousTool=undefined: the blocked call didn't advance the chain.
+      expect(receivedEvents[0].previousTool).toBeUndefined();
+      expect(receivedEvents[1].previousTool).toBeUndefined();
+    });
+
+    it('lastToolName does NOT advance when approval is denied', async () => {
+      const policy = new PolicyEngine(makeConfig({
+        servers: [{
+          name: 'srv', transport: 'stdio', command: 'npx', args: [], policy: 'approve',
+        }],
+      }));
+      const audit = makeAudit();
+      const upstream = makeUpstream({
+        resolve: vi.fn()
+          .mockReturnValueOnce({ serverName: 'srv', originalName: 'first' })
+          .mockReturnValueOnce({ serverName: 'srv', originalName: 'second' }),
+      });
+      const approvals = makeApprovals(false); // denied
+      const interceptor = new Interceptor(upstream, policy, approvals, audit);
+
+      await interceptor.handle('first', {});
+      await interceptor.handle('second', {});
+
+      const receivedEvents = (audit.log as ReturnType<typeof vi.fn>).mock.calls
+        .map((c: [{ event: string; previousTool?: string }]) => c[0])
+        .filter((e: { event: string }) => e.event === 'tool_call_received');
+      expect(receivedEvents[1].previousTool).toBeUndefined();
+    });
+
+    it('lastToolName does NOT advance when upstream throws', async () => {
+      const policy = new PolicyEngine(makeConfig());
+      const audit = makeAudit();
+      const upstream = makeUpstream({
+        resolve: vi.fn()
+          .mockReturnValueOnce({ serverName: 'db', originalName: 'query' })
+          .mockReturnValueOnce({ serverName: 'db', originalName: 'list' }),
+        callTool: vi.fn()
+          .mockRejectedValueOnce(new Error('upstream crash'))
+          .mockResolvedValueOnce({ content: [{ type: 'text', text: 'ok' }], isError: false }),
+      });
+      const interceptor = new Interceptor(upstream, policy, makeApprovals(true), audit);
+
+      await interceptor.handle('query', {}); // throws
+      await interceptor.handle('list', {});
+
+      const receivedEvents = (audit.log as ReturnType<typeof vi.fn>).mock.calls
+        .map((c: [{ event: string; previousTool?: string }]) => c[0])
+        .filter((e: { event: string }) => e.event === 'tool_call_received');
+      expect(receivedEvents[1].previousTool).toBeUndefined();
+    });
+
+    it('audit log includes callGraphRule on blocked calls when a rule fires', async () => {
+      const policy = new PolicyEngine(makeConfig({
+        callGraph: [
+          { from: 'query', to: 'post', action: 'block', reason: 'No outbound after queries.' },
+        ],
+      }));
+      const audit = makeAudit();
+      const upstream = makeUpstream({
+        resolve: vi.fn()
+          .mockReturnValueOnce({ serverName: 'db',  originalName: 'query' })
+          .mockReturnValueOnce({ serverName: 'net', originalName: 'post' }),
+      });
+      const interceptor = new Interceptor(upstream, policy, makeApprovals(true), audit);
+
+      await interceptor.handle('query', {});
+      await interceptor.handle('post', {});
+
+      const blockedEvent = (audit.log as ReturnType<typeof vi.fn>).mock.calls
+        .map((c: [{ event: string; callGraphRule?: { from: string; to: string } }]) => c[0])
+        .find((e: { event: string }) => e.event === 'tool_call_blocked');
+      expect(blockedEvent).toBeDefined();
+      expect(blockedEvent.callGraphRule).toEqual({ from: 'query', to: 'post' });
+    });
+
+    it('audit log includes callGraphRule on approval_requested when a rule fires', async () => {
+      const policy = new PolicyEngine(makeConfig({
+        callGraph: [
+          { from: 'query', to: 'post', action: 'approve' },
+        ],
+      }));
+      const audit = makeAudit();
+      const upstream = makeUpstream({
+        resolve: vi.fn()
+          .mockReturnValueOnce({ serverName: 'db',  originalName: 'query' })
+          .mockReturnValueOnce({ serverName: 'net', originalName: 'post' }),
+      });
+      const interceptor = new Interceptor(upstream, policy, makeApprovals(true), audit);
+
+      await interceptor.handle('query', {});
+      await interceptor.handle('post', {});
+
+      const approvalEvent = (audit.log as ReturnType<typeof vi.fn>).mock.calls
+        .map((c: [{ event: string; callGraphRule?: { from: string; to: string } }]) => c[0])
+        .find((e: { event: string }) => e.event === 'approval_requested');
+      expect(approvalEvent).toBeDefined();
+      expect(approvalEvent.callGraphRule).toEqual({ from: 'query', to: 'post' });
     });
   });
 });

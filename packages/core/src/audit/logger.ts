@@ -31,6 +31,18 @@ export interface AuditEntry {
   error?: string;
   servers?: string[];
   durationMs?: number;
+  /**
+   * The previously-executed tool's name (per Interceptor's lastToolName).
+   * Surfaced on `tool_call_received` so post-hoc analysis can reconstruct
+   * the chain that led to this call. `undefined` for the first call of a session.
+   */
+  previousTool?: string;
+  /**
+   * Identifies the call-graph rule (if any) that drove a block/approval.
+   * Present on `tool_call_blocked` / `approval_requested` events when a
+   * call-graph rule fired.
+   */
+  callGraphRule?: { from: string; to: string };
 }
 
 // ── Output implementations ────────────────────────────────────────────────────

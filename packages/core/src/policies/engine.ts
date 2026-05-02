@@ -1,12 +1,55 @@
-import type { PolicyAction, ResolvedConfig, ToolPolicy } from 'cordon-sdk';
+import type {
+  CallGraphAction,
+  CallGraphRule,
+  PolicyAction,
+  ResolvedConfig,
+  ToolPolicy,
+} from 'cordon-sdk';
 import { classifySql } from './sql-classifier.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Identifies which call-graph rule, if any, drove this decision. Surfaced
+ * to the audit log so post-hoc analysis can reconstruct the chain that
+ * triggered a block or approval.
+ */
+export interface CallGraphMatch {
+  /** The `from` glob pattern of the matched rule. */
+  from: string;
+  /** The `to` glob pattern of the matched rule. */
+  to: string;
+}
+
 export type PolicyDecision =
-  | { action: 'allow' }
-  | { action: 'block'; reason: string }
-  | { action: 'approve' };
+  | { action: 'allow'; callGraph?: CallGraphMatch }
+  | { action: 'block'; reason: string; callGraph?: CallGraphMatch }
+  | { action: 'approve'; callGraph?: CallGraphMatch };
+
+// ── Call-graph severity ───────────────────────────────────────────────────────
+
+/**
+ * Severity ordering used to enforce additive semantics: a call-graph rule
+ * only takes effect when its action is *higher* than the base per-tool
+ * decision. A rule cannot relax a stricter base.
+ */
+const CALL_GRAPH_SEVERITY: Record<CallGraphAction, number> = {
+  allow: 0,
+  approve: 1,
+  block: 2,
+};
+
+/**
+ * Glob matcher used by call-graph `from` and `to`. Supports:
+ *   - `*` (matches anything)
+ *   - prefix globs ending in `*` like `db:*`, `send_*`, `http:*`
+ *   - exact names like `db:query` or `get_market_data`
+ */
+function callGraphGlobMatch(name: string, pattern: string): boolean {
+  if (pattern === '*') return true;
+  if (pattern.endsWith('*')) return name.startsWith(pattern.slice(0, -1));
+  return name === pattern;
+}
 
 // ── Write detection ───────────────────────────────────────────────────────────
 
@@ -63,6 +106,8 @@ export class PolicyEngine {
   private serverPolicies = new Map<string, PolicyAction>();
   /** "serverName/toolName" → tool-level policy */
   private toolPolicies = new Map<string, ToolPolicy>();
+  /** Call-graph rules (additive — can only raise severity over per-tool decision). */
+  private callGraphRules: readonly CallGraphRule[];
 
   constructor(config: ResolvedConfig) {
     for (const server of config.servers) {
@@ -73,14 +118,28 @@ export class PolicyEngine {
         this.toolPolicies.set(`${server.name}/${toolName}`, policy);
       }
     }
+    this.callGraphRules = config.callGraph ?? [];
   }
 
   /**
    * Evaluate a tool call. Pass `args` for policies that inspect tool-call
-   * arguments (e.g. `sql-read-only`, `sql-approve-writes`). Omitting args
-   * is fine for policies that don't consult them.
+   * arguments (e.g. `sql-read-only`, `sql-approve-writes`). Pass `lastToolName`
+   * to enable call-graph rule evaluation on the (previous, current) pair.
+   *
+   * Call-graph rules apply *additively* on top of the per-tool decision —
+   * they can raise severity (e.g. `allow` → `approve`) but never lower it.
    */
-  evaluate(serverName: string, toolName: string, args?: unknown): PolicyDecision {
+  evaluate(
+    serverName: string,
+    toolName: string,
+    args?: unknown,
+    lastToolName?: string,
+  ): PolicyDecision {
+    const baseDecision = this.evaluateBase(serverName, toolName, args);
+    return this.applyCallGraph(baseDecision, toolName, lastToolName);
+  }
+
+  private evaluateBase(serverName: string, toolName: string, args?: unknown): PolicyDecision {
     // Tool-level policy takes highest precedence
     const toolPolicy = this.toolPolicies.get(`${serverName}/${toolName}`);
     if (toolPolicy !== undefined) {
@@ -90,6 +149,68 @@ export class PolicyEngine {
     // Server-level policy (default: allow)
     const serverPolicy = this.serverPolicies.get(serverName) ?? 'allow';
     return this.resolve(serverPolicy, toolName, args);
+  }
+
+  /**
+   * Apply call-graph rules on top of `baseDecision`. Returns the higher-severity
+   * decision when a matching rule exists, otherwise returns `baseDecision`
+   * unchanged.
+   */
+  private applyCallGraph(
+    baseDecision: PolicyDecision,
+    toolName: string,
+    lastToolName: string | undefined,
+  ): PolicyDecision {
+    if (this.callGraphRules.length === 0) return baseDecision;
+    if (lastToolName === undefined) return baseDecision;
+
+    // Find all rules where (lastToolName matches `from`) AND (toolName matches `to`).
+    let bestRule: CallGraphRule | undefined;
+    let bestSeverity = -1;
+    for (const rule of this.callGraphRules) {
+      if (
+        callGraphGlobMatch(lastToolName, rule.from) &&
+        callGraphGlobMatch(toolName, rule.to)
+      ) {
+        const severity = CALL_GRAPH_SEVERITY[rule.action];
+        if (severity > bestSeverity) {
+          bestRule = rule;
+          bestSeverity = severity;
+        }
+      }
+    }
+
+    if (!bestRule) return baseDecision;
+
+    // Additive: only override the base if the rule raises severity.
+    const baseSeverity = CALL_GRAPH_SEVERITY[baseDecision.action];
+    if (bestSeverity <= baseSeverity) return baseDecision;
+
+    return this.callGraphDecision(bestRule, toolName, lastToolName);
+  }
+
+  private callGraphDecision(
+    rule: CallGraphRule,
+    toolName: string,
+    lastToolName: string,
+  ): PolicyDecision {
+    const callGraph: CallGraphMatch = { from: rule.from, to: rule.to };
+    switch (rule.action) {
+      case 'allow':
+        // Unreachable in practice — additive logic prevents `allow` from ever
+        // overriding a stricter base. Included for exhaustiveness.
+        return { action: 'allow', callGraph };
+      case 'approve':
+        return { action: 'approve', callGraph };
+      case 'block':
+        return {
+          action: 'block',
+          reason:
+            rule.reason ??
+            `Tool '${toolName}' is blocked by call-graph rule (after '${lastToolName}')`,
+          callGraph,
+        };
+    }
   }
 
   /**

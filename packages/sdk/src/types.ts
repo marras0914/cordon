@@ -125,6 +125,34 @@ export interface RateLimitConfig {
   onExceeded: 'block' | 'queue';
 }
 
+// ── Call-graph constraints ────────────────────────────────────────────────────
+
+/**
+ * Subset of `PolicyAction` usable in call-graph rules. Heuristic actions
+ * (`read-only`, `sql-*`) are excluded because they need tool-call args at
+ * evaluation time; call-graph rules apply purely on `(lastTool, currentTool)`.
+ */
+export type CallGraphAction = 'allow' | 'approve' | 'block';
+
+export interface CallGraphRule {
+  /**
+   * Glob matching the previously-executed tool. Same semantics as `to`:
+   * exact name, prefix-glob like `db:*` or `send_*`, or `*` for "any tool."
+   */
+  from: string;
+  /** Glob matching the tool currently being requested. */
+  to: string;
+  /**
+   * Action applied when both `from` and `to` match. Additive: only takes
+   * effect if it raises severity over the base per-tool decision
+   * (severity: allow < approve < block). A rule with `action: 'allow'`
+   * never lowers a stricter base decision.
+   */
+  action: CallGraphAction;
+  /** Reason surfaced when the rule blocks or pauses for approval. */
+  reason?: string;
+}
+
 // ── Top-level config ──────────────────────────────────────────────────────────
 
 export interface CordonConfig {
@@ -133,6 +161,18 @@ export interface CordonConfig {
   approvals?: ApprovalConfig;
   /** Rate limiting — v2 feature, stubbed for now. */
   rateLimit?: RateLimitConfig;
+  /**
+   * Optional identity for this Cordon process. Surfaced in audit logs.
+   * In stdio mode, one Cordon process serves one agent — `agentId` identifies
+   * which deployment scope this gateway represents (e.g. `et-acquisition-agent`).
+   */
+  agentId?: string;
+  /**
+   * Cross-tool sequence rules. Evaluated on `(previousTool, currentTool)`
+   * pairs. Additive — call-graph rules can only raise severity over the
+   * per-tool policy, never lower it.
+   */
+  callGraph?: CallGraphRule[];
 }
 
 // ── Resolved config (internal) ────────────────────────────────────────────────

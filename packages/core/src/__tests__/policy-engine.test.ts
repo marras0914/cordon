@@ -363,4 +363,121 @@ describe('PolicyEngine', () => {
       });
     });
   });
+
+  // ── Call-graph rules ──────────────────────────────────────────────────────────
+
+  describe('call-graph rules', () => {
+    it('raises severity when a rule matches (allow → approve)', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [
+          { name: 'db',  transport: 'stdio', command: 'npx', args: [], policy: 'allow' },
+          { name: 'net', transport: 'stdio', command: 'npx', args: [], policy: 'allow' },
+        ],
+        callGraph: [
+          { from: 'query', to: 'post', action: 'approve' },
+        ],
+      }));
+      // Without lastTool: base 'allow' applies.
+      expect(engine.evaluate('net', 'post')).toEqual({ action: 'allow' });
+      // With matching lastTool: rule raises to 'approve' and surfaces match info.
+      expect(engine.evaluate('net', 'post', undefined, 'query')).toEqual({
+        action: 'approve',
+        callGraph: { from: 'query', to: 'post' },
+      });
+    });
+
+    it('cannot lower severity (block stays block, allow rule is ignored)', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{
+          name: 'fs', transport: 'stdio', command: 'npx', args: [],
+          tools: { delete_file: 'block' },
+        }],
+        callGraph: [
+          // A typo'd rule that tries to whitelist anything-after-read.
+          { from: 'read', to: 'delete_file', action: 'allow' },
+        ],
+      }));
+      const result = engine.evaluate('fs', 'delete_file', undefined, 'read');
+      expect(result.action).toBe('block');
+    });
+
+    it('falls through to base decision when no rule matches', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{ name: 'db', transport: 'stdio', command: 'npx', args: [], policy: 'allow' }],
+        callGraph: [
+          { from: 'query', to: 'post', action: 'block' },
+        ],
+      }));
+      // lastTool is 'list', not 'query' — no rule matches.
+      expect(engine.evaluate('db', 'post', undefined, 'list')).toEqual({ action: 'allow' });
+    });
+
+    it('matches prefix globs in `from` and `to`', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{ name: 'srv', transport: 'stdio', command: 'npx', args: [], policy: 'allow' }],
+        callGraph: [
+          { from: 'db_*', to: 'send_*', action: 'block', reason: 'Exfil-shaped sequence.' },
+        ],
+      }));
+      const result = engine.evaluate('srv', 'send_email', undefined, 'db_query');
+      expect(result).toEqual({
+        action: 'block',
+        reason: 'Exfil-shaped sequence.',
+        callGraph: { from: 'db_*', to: 'send_*' },
+      });
+    });
+
+    it('matches `*` wildcard on either side', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{ name: 'srv', transport: 'stdio', command: 'npx', args: [], policy: 'allow' }],
+        callGraph: [
+          { from: 'sensitive_read', to: '*', action: 'approve' },
+        ],
+      }));
+      // Any next call after sensitive_read requires approval.
+      expect(engine.evaluate('srv', 'anything', undefined, 'sensitive_read')).toEqual({
+        action: 'approve',
+        callGraph: { from: 'sensitive_read', to: '*' },
+      });
+    });
+
+    it('picks the highest-severity rule when multiple match (order-independent)', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{ name: 'srv', transport: 'stdio', command: 'npx', args: [], policy: 'allow' }],
+        callGraph: [
+          { from: 'query', to: 'post',  action: 'approve' },
+          { from: 'query', to: '*',     action: 'block', reason: 'No outbound after queries.' },
+          { from: '*',     to: 'post',  action: 'approve' },
+        ],
+      }));
+      // Three rules match (query, post). 'block' wins over both 'approve' rules.
+      const result = engine.evaluate('srv', 'post', undefined, 'query');
+      expect(result).toEqual({
+        action: 'block',
+        reason: 'No outbound after queries.',
+        callGraph: { from: 'query', to: '*' },
+      });
+    });
+
+    it('first call has no lastTool — no rule can match', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{ name: 'srv', transport: 'stdio', command: 'npx', args: [], policy: 'allow' }],
+        callGraph: [
+          { from: '*', to: '*', action: 'block' },
+        ],
+      }));
+      // lastToolName undefined: rule cannot fire.
+      expect(engine.evaluate('srv', 'first_call')).toEqual({ action: 'allow' });
+      expect(engine.evaluate('srv', 'first_call', undefined, undefined)).toEqual({ action: 'allow' });
+    });
+
+    it('config without callGraph is a no-op (backward compatible)', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{ name: 'srv', transport: 'stdio', command: 'npx', args: [], policy: 'allow' }],
+      }));
+      // lastToolName provided but no callGraph rules — base decision applies unchanged.
+      expect(engine.evaluate('srv', 'whatever', undefined, 'previous_tool'))
+        .toEqual({ action: 'allow' });
+    });
+  });
 });
