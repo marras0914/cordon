@@ -103,7 +103,7 @@ cordon init
 `cordon init` generates a `cordon.config.ts`:
 
 ```typescript
-import { defineConfig } from '@getcordon/sdk';
+import { defineConfig } from '@getcordon/policy';
 
 export default defineConfig({
   servers: [
@@ -394,7 +394,7 @@ Policies can be set at the server level (default for all tools) or per-tool (ove
 | Package | Description |
 |---|---|
 | `@getcordon/cli` | The CLI — `npx @getcordon/cli start` |
-| `@getcordon/sdk` | TypeScript config SDK — `defineConfig()` and all types |
+| `@getcordon/policy` | TypeScript config SDK — `defineConfig()` and all types |
 | `@getcordon/core` | Core proxy engine — policy evaluator, audit logger, approval manager |
 
 ---

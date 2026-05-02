@@ -6,7 +6,7 @@ Security gateway for AI agents. Sits between the LLM client (Claude Desktop, Cur
 
 ```
 packages/
-  sdk/    @getcordon/sdk          — defineConfig() helper + all TypeScript types (no runtime deps)
+  sdk/    @getcordon/policy          — defineConfig() helper + all TypeScript types (no runtime deps)
   core/   @getcordon/core     — proxy engine: gateway, policy, approvals, audit, upstream manager
   cli/    @getcordon/cli          — CLI commands: `cordon start`, `cordon init`
 
@@ -99,7 +99,7 @@ When two upstream servers expose a tool with the same name, Cordon auto-namespac
 Users write `cordon.config.ts` in their project root:
 
 ```typescript
-import { defineConfig } from '@getcordon/sdk';
+import { defineConfig } from '@getcordon/policy';
 
 export default defineConfig({
   servers: [
@@ -134,7 +134,7 @@ GitHub repo: `github.com/marras0914/cordon`
 npm org: `getcordon` (org name `cordon` was taken)
 
 **Published versions:**
-- `@getcordon/sdk@0.1.1` ✓
+- `@getcordon/policy@0.1.1` ✓
 - `@getcordon/core@0.2.0` ✓ (rate limiting)
 - `@getcordon/cli@0.1.2` ✓
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
-import type { StdioServerConfig } from '@getcordon/sdk';
+import type { StdioServerConfig } from '@getcordon/policy';
 import { filterUnknownTools } from '../proxy/upstream-manager.js';
 
 function tool(name: string): Tool {

@@ -1,6 +1,6 @@
 import { createWriteStream } from 'node:fs';
 import type { WriteStream } from 'node:fs';
-import type { AuditConfig, AuditOutputType } from '@getcordon/sdk';
+import type { AuditConfig, AuditOutputType } from '@getcordon/policy';
 
 // ── Audit entry types ─────────────────────────────────────────────────────────
 

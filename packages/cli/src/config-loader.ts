@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { createJiti } from 'jiti';
-import type { CordonConfig, ResolvedConfig } from '@getcordon/sdk';
+import type { CordonConfig, ResolvedConfig } from '@getcordon/policy';
 
 const SEARCH_PATHS = [
   () => join(process.cwd(), 'cordon.config.ts'),

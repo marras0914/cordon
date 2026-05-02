@@ -1,5 +1,5 @@
 import { CordonGateway } from '@getcordon/core';
-import type { ResolvedConfig } from '@getcordon/sdk';
+import type { ResolvedConfig } from '@getcordon/policy';
 import { emptyConfig, findConfigPath, loadConfig } from '../config-loader.js';
 import { getState, setState, getAuth } from '../cli-state.js';
 

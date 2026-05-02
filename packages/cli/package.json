@@ -49,7 +49,7 @@
   },
   "dependencies": {
     "@getcordon/core": "*",
-    "@getcordon/sdk": "*",
+    "@getcordon/policy": "*",
     "commander": "^12.1.0",
     "jiti": "^2.4.0"
   },

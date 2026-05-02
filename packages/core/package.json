@@ -47,7 +47,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.11.0",
-    "@getcordon/sdk": "*",
+    "@getcordon/policy": "*",
     "node-sql-parser": "^5.4.0"
   },
   "devDependencies": {

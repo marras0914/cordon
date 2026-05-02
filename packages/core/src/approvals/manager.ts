@@ -1,4 +1,4 @@
-import type { ApprovalConfig } from '@getcordon/sdk';
+import type { ApprovalConfig } from '@getcordon/policy';
 import { TerminalApprovalChannel } from './terminal.js';
 import { SlackApprovalChannel } from './slack.js';
 

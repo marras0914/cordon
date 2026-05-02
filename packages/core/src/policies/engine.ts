@@ -4,7 +4,7 @@ import type {
   PolicyAction,
   ResolvedConfig,
   ToolPolicy,
-} from '@getcordon/sdk';
+} from '@getcordon/policy';
 import { classifySql } from './sql-classifier.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────

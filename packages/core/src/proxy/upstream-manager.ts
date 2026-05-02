@@ -1,7 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
-import type { StdioServerConfig } from '@getcordon/sdk';
+import type { StdioServerConfig } from '@getcordon/policy';
 
 // On Windows, bare Node tool names like `npx` aren't resolvable via
 // CreateProcess — we need the `.cmd` shim. Claude Desktop and other clients
