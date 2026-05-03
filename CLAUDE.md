@@ -133,18 +133,28 @@ npm username: `marras0914`
 GitHub repo: `github.com/marras0914/cordon`
 npm org: `getcordon` (org name `cordon` was taken)
 
-**Published versions:**
-- `@getcordon/policy@0.1.1` ✓
-- `@getcordon/core@0.2.0` ✓ (rate limiting)
-- `@getcordon/cli@0.1.2` ✓
+**Published versions (current as of 2026-05-02):**
+- `@getcordon/policy@0.2.9` (sdk role; renamed from `cordon-sdk` on 2026-05-02)
+- `@getcordon/core@0.3.2`
+- `@getcordon/cli@0.2.1` (renamed from `cordon-cli` on 2026-05-02; bin name still `cordon`)
 
-To publish a new version:
+The unscoped names `cordon-sdk` and `cordon-cli` are deprecated on npm with migration pointers. They still resolve, but `npm install` warns users to switch.
+
+To publish a new version (workspace dep order matters: sdk → core → cli):
 ```bash
 npm login
 cd packages/sdk  && npm version patch && npm run build && npm publish --access public --otp=XXXXXX
 cd packages/core && npm version patch && npm run build && npm publish --access public --otp=XXXXXX
 cd packages/cli  && npm version patch && npm run build && npm publish --access public --otp=XXXXXX
 ```
+
+### npm content-policy pitfall — avoid SQL-injection literals in READMEs
+
+npm's malware scanner returns 403 Forbidden ("forbidden by your security policy") on any package whose published content contains classic SQL-injection demo strings. Specifically, the literal `"SELECT 1; DROP TABLE x"` in the sdk README's SQL-aware-policies section was the trigger that blocked publishes for ~2 weeks (2026-04-19 → 2026-05-02). The block looked like a namespace/account dispute but was just a malware-scanner false positive on documentation content.
+
+**Rule:** when documenting SQL detection or anti-injection features in any package README, describe the *shape* of the pattern rather than including the literal injection string. The scanner doesn't read prose — it pattern-matches across all included files (including README.md, which is always shipped in the npm tarball regardless of the `files` array in package.json).
+
+If a future publish 403's with no obvious cause, run a stub-README publish to confirm; if that succeeds, bisect the README content. Likely culprits: any literal SQL injection demo, classic XSS payload (`<script>alert(1)</script>`), shell injection demos (`; rm -rf /`), or similar exploit pattern strings.
 
 ## What's Not Built Yet (v1 deferred)
 
