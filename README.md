@@ -264,6 +264,8 @@ If the next Postgres MCP release adds `truncate_table`, Cordon blocks it with a 
 
 ### Per-Agent Policies + Call-Graph Constraints
 
+![Tier 1 demo — read_data succeeds, write_file blocked by call-graph rule](./docs/assets/tier1-call-graph-demo.gif)
+
 Per-tool policies catch dangerous *individual* calls. Call-graph rules catch dangerous *sequences* — combinations of allowed tools used in unintended order. The classic example: an agent reads sensitive data with `read_data` (allowed) and then writes it to disk with `write_file` (also allowed). Each call is fine in isolation. The *sequence* is the problem.
 
 Cordon's call-graph rules apply on top of your per-tool policy and are **additive** — they can only raise severity, never lower it.
