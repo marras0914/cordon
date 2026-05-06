@@ -475,3 +475,11 @@ MIT — see [LICENSE](./LICENSE) for details.
   <br />
   <a href="https://github.com/marras0914/cordon">⭐ Star on GitHub</a>
 </p>
+
+<p align="center" style="font-size: 0.85em; color: #888;">
+  <a href="https://getcordon.com/privacy/">Privacy</a> ·
+  <a href="https://getcordon.com/terms/">Terms</a> ·
+  <a href="mailto:support@getcordon.com">support@getcordon.com</a>
+  <br/>
+  © 2026 Elephant Tortoise LLC
+</p>
