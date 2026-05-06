@@ -15,7 +15,14 @@ function openBrowser(url: string): void {
   const cmd = process.platform === 'darwin' ? 'open'
     : process.platform === 'win32' ? 'cmd'
     : 'xdg-open';
-  const args = process.platform === 'win32' ? ['/c', 'start', '""', url] : [url];
+  // On Windows, `cmd /c start "" <url>` runs through cmd.exe, which treats
+  // `&` and `^` as shell metacharacters. Without escaping them, query strings
+  // like `?callback=…&state=…` get truncated at the first `&`, breaking the
+  // OAuth state hand-off. Replace `^` first so we don't double-escape new ^&.
+  const safeUrl = process.platform === 'win32'
+    ? url.replace(/\^/g, '^^').replace(/&/g, '^&')
+    : url;
+  const args = process.platform === 'win32' ? ['/c', 'start', '""', safeUrl] : [safeUrl];
   try {
     spawn(cmd, args, { detached: true, stdio: 'ignore' }).unref();
   } catch { /* swallow — caller has already printed the URL for manual paste */ }
