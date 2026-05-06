@@ -34,6 +34,65 @@ interface CallbackResult {
   signup: string;
 }
 
+function renderCallbackPage(kind: 'success' | 'error', heading: string, body: string): string {
+  const accent = kind === 'success' ? '#14b8a6' : '#f87171';
+  const accentBg = kind === 'success' ? 'rgba(20, 184, 166, 0.15)' : 'rgba(248, 113, 113, 0.15)';
+  const mark = kind === 'success' ? '✓' : '✗';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${kind === 'success' ? 'Logged in' : 'Login failed'} — Cordon for MCP</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' fill='%2314b8a6'>◈</text></svg>">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d0d0d; color: #e8e8e8;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem;
+    }
+    .card {
+      background: #161616; border: 1px solid #2a2a2a; border-radius: 16px;
+      padding: 48px; max-width: 420px; width: 100%; text-align: center;
+    }
+    .brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 1.75rem; }
+    .icon { font-size: 1.4rem; color: #14b8a6; }
+    .name { font-weight: 600; font-size: 16px; letter-spacing: -0.3px; white-space: nowrap; }
+    .mark {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: ${accentBg}; color: ${accent};
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.25rem; font-size: 28px; font-weight: 700;
+    }
+    h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.6rem; }
+    p { color: #888; font-size: 0.95rem; line-height: 1.5; }
+    p + p { margin-top: 0.5rem; }
+    code {
+      background: rgba(255, 255, 255, 0.06); color: #e8e8e8;
+      padding: 1px 6px; border-radius: 3px; font-size: 0.85em;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    }
+    .hint {
+      margin-top: 1.75rem; padding-top: 1.5rem;
+      border-top: 1px solid #2a2a2a; font-size: 0.85rem; color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">
+      <span class="icon">◈</span>
+      <span class="name">Cordon for MCP</span>
+    </div>
+    <div class="mark">${mark}</div>
+    <h1>${heading}</h1>
+    ${body}
+  </div>
+</body>
+</html>`;
+}
+
 async function listenForCallback(port: number, expectedState: string): Promise<CallbackResult> {
   return new Promise((resolve, reject) => {
     const server = createServer((req, res) => {
@@ -47,15 +106,21 @@ async function listenForCallback(port: number, expectedState: string): Promise<C
       const signup = url.searchParams.get('signup') ?? 'false';
 
       if (state !== expectedState || !token) {
+        const body =
+          `<p>The login link didn't carry a valid token, or the security state didn't match.</p>` +
+          `<p class="hint">Run <code>cordon login</code> again from your terminal. You can close this tab.</p>`;
         res.writeHead(400, { 'Content-Type': 'text/html' })
-          .end('<html><body><h2>Login failed</h2><p>State mismatch or missing token. You can close this tab.</p></body></html>');
+          .end(renderCallbackPage('error', "Login didn't complete", body));
         server.close();
         reject(new Error('Callback state mismatch'));
         return;
       }
 
+      const body =
+        `<p>Your API key is saved. Return to your terminal to continue.</p>` +
+        `<p class="hint">You can close this tab.</p>`;
       res.writeHead(200, { 'Content-Type': 'text/html' })
-        .end('<html><body style="font-family:system-ui;padding:40px;"><h2>Logged in to Cordon for MCP</h2><p>You can close this tab and return to your terminal.</p></body></html>');
+        .end(renderCallbackPage('success', "You're logged in", body));
       server.close();
       resolve({ token, state, signup });
     });
