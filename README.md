@@ -479,7 +479,8 @@ MIT — see [LICENSE](./LICENSE) for details.
 <p align="center" style="font-size: 0.85em; color: #888;">
   <a href="https://getcordon.com/privacy/">Privacy</a> ·
   <a href="https://getcordon.com/terms/">Terms</a> ·
-  <a href="mailto:partners@getcordon.com">partners@getcordon.com</a>
+  <a href="mailto:support@getcordon.com">Support</a> ·
+  <a href="mailto:partners@getcordon.com">Partners</a>
   <br/>
   © 2026 Elephant Tortoise LLC
 </p>
