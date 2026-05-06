@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Cordon for MCP</title>
+  <meta name="description" content="Privacy policy for Cordon for MCP — what we collect, how we use it, and your rights." />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' fill='%2314b8a6'>◈</text></svg>" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d0d; --surface: #161616; --border: #2a2a2a;
+      --text: #e8e8e8; --muted: #888; --accent: #14b8a6;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px; line-height: 1.6;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem 2rem; border-bottom: 1px solid var(--border);
+      max-width: 760px; margin: 0 auto;
+    }
+    .logo { font-weight: 700; font-size: 1.1rem; letter-spacing: -0.02em; color: var(--text); }
+    .logo span { color: var(--accent); }
+    nav .links { display: flex; gap: 1.5rem; font-size: 0.9rem; color: var(--muted); }
+    nav .links a { color: var(--muted); }
+    nav .links a:hover { color: var(--text); text-decoration: none; }
+    .container { max-width: 760px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    h1 {
+      font-size: 2rem; font-weight: 700; letter-spacing: -0.03em;
+      line-height: 1.15; margin-bottom: 0.75rem;
+    }
+    .updated { color: var(--muted); font-size: 0.9rem; margin-bottom: 2.5rem; }
+    h2 {
+      font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em;
+      margin-top: 2.5rem; margin-bottom: 0.75rem;
+    }
+    p { margin-bottom: 1rem; color: var(--text); }
+    ul { margin: 0 0 1rem 1.5rem; }
+    li { margin-bottom: 0.4rem; }
+    .muted { color: var(--muted); }
+    code {
+      background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 3px;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 0.85em;
+    }
+    footer {
+      max-width: 760px; margin: 0 auto; padding: 2rem;
+      border-top: 1px solid var(--border); color: var(--muted);
+      font-size: 0.85rem; display: flex; gap: 1.5rem; flex-wrap: wrap;
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); text-decoration: none; }
+  </style>
+  <!-- Privacy-friendly analytics by Plausible -->
+  <script async src="https://plausible.io/js/pa--COeFWp_3cnlwJ8_r4pNP.js"></script>
+  <script>
+    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+    plausible.init()
+  </script>
+</head>
+<body>
+  <nav>
+    <a href="/" class="logo">cor<span>don</span></a>
+    <div class="links">
+      <a href="/">Home</a>
+      <a href="/terms/">Terms</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: May 5, 2026</p>
+
+    <p>
+      This Privacy Policy describes how <strong>Elephant Tortoise LLC</strong>
+      (&ldquo;we&rdquo;, &ldquo;us&rdquo;), a Texas limited liability company and the operator of
+      Cordon for MCP (the <code>@getcordon/cli</code> and <code>@getcordon/policy</code>
+      packages, the <code>@getcordon/core</code> proxy engine, and the hosted dashboard at
+      <a href="https://app.getcordon.com">app.getcordon.com</a>), collects and uses information.
+    </p>
+
+    <h2>What we collect</h2>
+
+    <p>When you sign in to the Cordon dashboard with GitHub, we receive from GitHub:</p>
+    <ul>
+      <li>Your GitHub user ID and login (username)</li>
+      <li>Your email address</li>
+      <li>Your avatar URL</li>
+    </ul>
+
+    <p>When you use Cordon with hosted audit logging enabled, we receive audit events that you generate, which include:</p>
+    <ul>
+      <li>Tool call metadata (server name, tool name, timestamp, duration)</li>
+      <li>Policy decisions (allowed, blocked, or approved)</li>
+      <li>The arguments passed to each tool call, which may contain content from your usage</li>
+    </ul>
+
+    <p>We do <em>not</em> collect:</p>
+    <ul>
+      <li>Payment information &mdash; the hosted dashboard is currently free, no payment is processed</li>
+      <li>Browsing history outside our domains</li>
+      <li>Personal data beyond what is listed above</li>
+    </ul>
+
+    <h2>How we use it</h2>
+    <p>We use the data to authenticate you on the dashboard, show you your own audit logs and approval queue, and operate the service.</p>
+    <p>We do <em>not</em> sell your data, share it with third parties for marketing, or use it to train AI models.</p>
+
+    <h2>Third-party services we use</h2>
+    <ul>
+      <li><strong>GitHub</strong> for OAuth authentication (governed by GitHub&rsquo;s privacy policy)</li>
+      <li><strong>Railway</strong> for hosting the server and database</li>
+      <li><strong>Stripe</strong> for future payment processing (currently dormant; no payment data is collected today)</li>
+      <li><strong>Plausible Analytics</strong> for privacy-friendly traffic measurement &mdash; no cookies, IP-anonymized</li>
+    </ul>
+
+    <h2>Data retention</h2>
+    <ul>
+      <li>Audit log events are automatically deleted 30 days after they are received.</li>
+      <li>Your user account and API keys are retained until you request deletion.</li>
+    </ul>
+
+    <h2>Your rights</h2>
+    <p>You can request a copy of your data, correction of inaccurate data, or deletion of your account and associated data by emailing
+      <a href="mailto:support@getcordon.com">support@getcordon.com</a>.</p>
+
+    <h2>Changes to this policy</h2>
+    <p>We may update this policy from time to time. The &ldquo;Last updated&rdquo; date at the top reflects the most recent change. Material changes will be announced on
+      <a href="https://getcordon.com">getcordon.com</a> or via email to registered users.</p>
+
+    <h2>Contact</h2>
+    <p>Questions, requests, or concerns: <a href="mailto:support@getcordon.com">support@getcordon.com</a>.</p>
+  </div>
+
+  <footer>
+    <a href="/">Home</a>
+    <a href="/terms/">Terms</a>
+    <a href="https://github.com/marras0914/cordon">GitHub</a>
+    <span class="muted" style="margin-left: auto;">&copy; 2026 Elephant Tortoise LLC</span>
+  </footer>
+</body>
+</html>

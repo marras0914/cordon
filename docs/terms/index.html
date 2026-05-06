@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service — Cordon for MCP</title>
+  <meta name="description" content="Terms of service for Cordon for MCP — service description, acceptable use, disclaimers." />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' fill='%2314b8a6'>◈</text></svg>" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d0d; --surface: #161616; --border: #2a2a2a;
+      --text: #e8e8e8; --muted: #888; --accent: #14b8a6;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px; line-height: 1.6;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem 2rem; border-bottom: 1px solid var(--border);
+      max-width: 760px; margin: 0 auto;
+    }
+    .logo { font-weight: 700; font-size: 1.1rem; letter-spacing: -0.02em; color: var(--text); }
+    .logo span { color: var(--accent); }
+    nav .links { display: flex; gap: 1.5rem; font-size: 0.9rem; color: var(--muted); }
+    nav .links a { color: var(--muted); }
+    nav .links a:hover { color: var(--text); text-decoration: none; }
+    .container { max-width: 760px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+    h1 {
+      font-size: 2rem; font-weight: 700; letter-spacing: -0.03em;
+      line-height: 1.15; margin-bottom: 0.75rem;
+    }
+    .updated { color: var(--muted); font-size: 0.9rem; margin-bottom: 2.5rem; }
+    h2 {
+      font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em;
+      margin-top: 2.5rem; margin-bottom: 0.75rem;
+    }
+    p { margin-bottom: 1rem; color: var(--text); }
+    ul { margin: 0 0 1rem 1.5rem; }
+    li { margin-bottom: 0.4rem; }
+    .muted { color: var(--muted); }
+    code {
+      background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 3px;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 0.85em;
+    }
+    footer {
+      max-width: 760px; margin: 0 auto; padding: 2rem;
+      border-top: 1px solid var(--border); color: var(--muted);
+      font-size: 0.85rem; display: flex; gap: 1.5rem; flex-wrap: wrap;
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); text-decoration: none; }
+  </style>
+  <!-- Privacy-friendly analytics by Plausible -->
+  <script async src="https://plausible.io/js/pa--COeFWp_3cnlwJ8_r4pNP.js"></script>
+  <script>
+    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+    plausible.init()
+  </script>
+</head>
+<body>
+  <nav>
+    <a href="/" class="logo">cor<span>don</span></a>
+    <div class="links">
+      <a href="/">Home</a>
+      <a href="/privacy/">Privacy</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1>Terms of Service</h1>
+    <p class="updated">Last updated: May 5, 2026</p>
+
+    <p>
+      These Terms of Service govern your use of Cordon for MCP (the &ldquo;Service&rdquo;), operated by
+      <strong>Elephant Tortoise LLC</strong> (&ldquo;we&rdquo;, &ldquo;us&rdquo;), a Texas limited liability company.
+      By using the Service, you agree to these Terms.
+    </p>
+
+    <h2>The Service</h2>
+    <p>Cordon for MCP consists of:</p>
+    <ul>
+      <li>An open-source CLI and SDK published on npm under <code>@getcordon/*</code>, MIT-licensed (source: <a href="https://github.com/marras0914/cordon">github.com/marras0914/cordon</a>)</li>
+      <li>A hosted dashboard at <a href="https://app.getcordon.com">app.getcordon.com</a> that stores your audit logs and approval state</li>
+    </ul>
+    <p>The CLI is free and open source under the MIT License. The hosted dashboard is currently provided free of charge.</p>
+
+    <h2>Acceptable use</h2>
+    <p>You agree not to:</p>
+    <ul>
+      <li>Use the Service for unlawful purposes</li>
+      <li>Attempt to disrupt, attack, reverse-engineer, or gain unauthorized access to the hosted infrastructure</li>
+      <li>Use the Service to abuse, attack, or compromise other systems</li>
+    </ul>
+
+    <h2>License</h2>
+    <p>The Cordon CLI and SDK are licensed under the MIT License (see the <code>LICENSE</code> file in the repository). The hosted dashboard is provided to you as a free service under these Terms; we grant you a non-exclusive, revocable license to use it for its intended purpose.</p>
+
+    <h2>Disclaimers</h2>
+    <p>
+      The Service is provided <strong>&ldquo;AS IS&rdquo;</strong> without warranties of any kind, express or implied,
+      including warranties of merchantability, fitness for a particular purpose, or non-infringement.
+    </p>
+    <p>
+      Cordon is designed to add a security layer to MCP tool calls, but it does not guarantee that all attacks
+      will be prevented. Effective security depends on correct policy configuration, the security of underlying
+      MCP servers, the integrity of the host environment, and many factors outside our control.
+      <strong>You remain responsible for the security of your systems and the data those systems handle.</strong>
+    </p>
+
+    <h2>Limitation of liability</h2>
+    <p>
+      To the maximum extent permitted by applicable law, in no event will Elephant Tortoise LLC be liable for any
+      indirect, incidental, special, consequential, or exemplary damages arising out of or in connection with
+      your use of the Service.
+    </p>
+
+    <h2>Termination</h2>
+    <p>You may stop using the Service at any time. You can request deletion of your account and associated data by emailing
+      <a href="mailto:support@getcordon.com">support@getcordon.com</a>.</p>
+    <p>We may suspend or terminate accounts that violate these Terms, abuse the Service, or threaten the safety of other users.</p>
+
+    <h2>Changes to these Terms</h2>
+    <p>We may update these Terms from time to time. The &ldquo;Last updated&rdquo; date at the top reflects the most recent change. Material changes will be announced on
+      <a href="https://getcordon.com">getcordon.com</a> or via email to registered users.</p>
+
+    <h2>Governing law</h2>
+    <p>These Terms are governed by the laws of the State of Texas, United States, without regard to conflict of laws principles.</p>
+
+    <h2>Contact</h2>
+    <p>Questions or notices: <a href="mailto:support@getcordon.com">support@getcordon.com</a>.</p>
+  </div>
+
+  <footer>
+    <a href="/">Home</a>
+    <a href="/privacy/">Privacy</a>
+    <a href="https://github.com/marras0914/cordon">GitHub</a>
+    <span class="muted" style="margin-left: auto;">&copy; 2026 Elephant Tortoise LLC</span>
+  </footer>
+</body>
+</html>
