@@ -59,7 +59,7 @@ export default defineConfig({
     output: ["stdout", "file", "hosted"],
     filePath: join(__dirname, "cordon-audit.log"),
     endpoint: "https://app.getcordon.com",
-    apiKey: "crd_add6ef3ab2f04f62947667c5548f27df",
+    apiKey: process.env.CORDON_API_KEY ?? "crd_REPLACE_WITH_YOUR_KEY",
   },
 
   approvals: {
@@ -67,7 +67,7 @@ export default defineConfig({
     slackBotToken: process.env.SLACK_BOT_TOKEN ?? "",
     slackChannel: "#cordon-approvals",
     endpoint: "https://app.getcordon.com",
-    apiKey: "crd_add6ef3ab2f04f62947667c5548f27df",
+    apiKey: process.env.CORDON_API_KEY ?? "crd_REPLACE_WITH_YOUR_KEY",
     timeoutMs: 60_000,
   },
 });
