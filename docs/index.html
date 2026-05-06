@@ -350,7 +350,6 @@
   <nav class="container">
     <span class="logo">cor<span>don</span></span>
     <div class="links">
-      <a href="#pricing">Pricing</a>
       <a href="https://github.com/marras0914/cordon">GitHub</a>
       <a href="https://app.getcordon.com/dashboard/">Dashboard</a>
     </div>
@@ -437,11 +436,9 @@
         Cordon is a transparent proxy. It requires no changes to your existing MCP servers
         or Claude Desktop config — <code>cordon init</code> handles the wiring.
       </p>
-      <div class="arch">
-        Claude Desktop &nbsp;──stdio──▶&nbsp; <span class="highlight">Cordon</span> &nbsp;──stdio──▶&nbsp; MCP server A<br/>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;──stdio──▶&nbsp; MCP server B<br/>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;──stdio──▶&nbsp; MCP server N
-      </div>
+      <pre class="arch">Claude Desktop  --stdio--?  <span class="highlight">Cordon</span>  --stdio--?  MCP server A
+                                    --stdio--?  MCP server B
+                                    --stdio--?  MCP server N</pre>
     </section>
   </div>
 
@@ -489,32 +486,6 @@
     </section>
   </div>
 
-  <!-- PRICING -->
-  <div class="container" id="pricing">
-    <section>
-      <h2>Pricing</h2>
-      <p style="color: var(--muted); max-width: 580px;">
-        Cordon is free. The CLI is open source, the hosted dashboard is free to use,
-        no credit card.
-      </p>
-      <div class="pricing-grid" style="grid-template-columns: 1fr; max-width: 480px;">
-        <div class="plan plan-featured">
-          <div class="plan-name">Free</div>
-          <div class="plan-price">$0</div>
-          <p class="plan-desc">Everything you need to ship safely.</p>
-          <ul class="plan-features">
-            <li>Full proxy engine + policy enforcement</li>
-            <li>Terminal and Slack approvals</li>
-            <li>Hosted audit dashboard</li>
-            <li>Unlimited events</li>
-            <li>CSV / JSON export</li>
-            <li>Up to 5 API keys per account</li>
-          </ul>
-          <a class="btn-plan btn-primary" href="https://app.getcordon.com/dashboard/">Get started</a>
-        </div>
-      </div>
-    </section>
-  </div>
 
   <!-- QUICK START -->
   <div class="container">
