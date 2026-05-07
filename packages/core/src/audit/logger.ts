@@ -1,5 +1,7 @@
-import { createWriteStream } from 'node:fs';
+import { createWriteStream, existsSync, readFileSync } from 'node:fs';
 import type { WriteStream } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type { AuditConfig, AuditOutputType } from '@getcordon/policy';
 
 // ── Audit entry types ─────────────────────────────────────────────────────────
@@ -176,6 +178,19 @@ export class AuditLogger {
         }
         return new HostedAuditOutput(endpoint, apiKey);
       }
+      case 'auto': {
+        const auth = readCordonAuth();
+        if (auth) {
+          process.stderr.write(
+            `[cordon] audit: 'auto' → 'hosted' (${auth.endpoint})\n`,
+          );
+          return new HostedAuditOutput(auth.endpoint, auth.apiKey);
+        }
+        process.stderr.write(
+          `[cordon] audit: 'auto' → 'stdout' (no Cordon login found — run \`cordon login\` to enable hosted audit)\n`,
+        );
+        return new StderrAuditOutput();
+      }
       case 'otlp':
       case 'webhook':
         // v2 — fall back to stderr for now
@@ -184,5 +199,20 @@ export class AuditLogger {
         );
         return new StderrAuditOutput();
     }
+  }
+}
+
+function readCordonAuth(): { endpoint: string; apiKey: string } | null {
+  const authPath = join(homedir(), '.cordon', 'auth.json');
+  if (!existsSync(authPath)) return null;
+  try {
+    const parsed = JSON.parse(readFileSync(authPath, 'utf8')) as {
+      endpoint?: string;
+      apiKey?: string;
+    };
+    if (!parsed.endpoint || !parsed.apiKey) return null;
+    return { endpoint: parsed.endpoint, apiKey: parsed.apiKey };
+  } catch {
+    return null;
   }
 }

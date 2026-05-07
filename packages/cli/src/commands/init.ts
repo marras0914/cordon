@@ -1,8 +1,10 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { createInterface } from 'node:readline';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { setState, getAuth } from '../cli-state.js';
+import { loginCommand } from './login.js';
 
 const DASHBOARD_URL = 'https://app.getcordon.com/dashboard/';
 
@@ -38,6 +40,21 @@ function ensureCordonSdkInstalled(cwd: string): void {
         `Run 'npm install @getcordon/policy' in this directory before 'cordon start'.\n`,
     );
   }
+}
+
+async function promptYesNo(question: string): Promise<boolean> {
+  // Non-interactive (CI, piped stdin): skip rather than surprise the operator
+  // with a browser tab and a 5-minute callback timeout.
+  if (!process.stdin.isTTY) return false;
+  const rl = createInterface({ input: process.stdin, output: process.stderr });
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      const trimmed = answer.trim().toLowerCase();
+      // Empty = default Yes
+      resolve(trimmed === '' || trimmed === 'y' || trimmed === 'yes');
+    });
+  });
 }
 
 interface ClaudeDesktopConfig {
@@ -121,7 +138,29 @@ export async function initCommand(): Promise<void> {
     //   policy: 'allow',
     // },`;
 
-  const auth = getAuth();
+  let auth = getAuth();
+  let promptShown = false;
+  if (!auth && process.stdin.isTTY) {
+    promptShown = true;
+    process.stderr.write(
+      `\n\x1b[36mCordon works locally out of the box.\x1b[0m ` +
+        `Sign in to enable hosted audit logs + Slack approvals (free).\n`,
+    );
+    const wantsLogin = await promptYesNo('Sign in via browser now? [Y/n] ');
+    if (wantsLogin) {
+      try {
+        await loginCommand();
+        auth = getAuth();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'unknown error';
+        process.stderr.write(
+          `\x1b[33mwarn\x1b[0m: login didn't complete (${msg}). ` +
+            `Continuing with local stdout audit. Run \x1b[36mcordon login\x1b[0m later.\n`,
+        );
+      }
+    }
+  }
+
   const auditBlock = auth
     ? `audit: {
     enabled: true,
@@ -130,7 +169,8 @@ export async function initCommand(): Promise<void> {
   },`
     : `audit: {
     enabled: true,
-    output: 'stdout',
+    // 'auto' streams to stdout until you run \`cordon login\`, then auto-switches to hosted.
+    output: 'auto',
   },`;
 
   const content = `import { defineConfig } from '@getcordon/policy';
@@ -230,6 +270,10 @@ ${serverBlocks}
   if (auth) {
     process.stderr.write(
       `\n\x1b[32m✓\x1b[0m audit logs will stream to your Cordon account (${auth.endpoint})\n`,
+    );
+  } else if (promptShown) {
+    process.stderr.write(
+      `\n[cordon] running in local mode. Run \x1b[36mcordon login\x1b[0m later to enable hosted audit.\n`,
     );
   } else {
     process.stderr.write(

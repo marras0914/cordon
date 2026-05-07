@@ -97,7 +97,15 @@ export interface ApprovalConfig {
 
 // ── Audit ─────────────────────────────────────────────────────────────────────
 
-export type AuditOutputType = 'stdout' | 'file' | 'hosted' | 'otlp' | 'webhook';
+/**
+ * Audit destination.
+ *
+ * `'auto'` resolves at runtime: streams to the hosted dashboard if a Cordon
+ * login exists at `~/.cordon/auth.json`, otherwise falls back to `'stdout'`.
+ * Use this when you want a single config that works before and after `cordon login`
+ * without hand-editing.
+ */
+export type AuditOutputType = 'stdout' | 'file' | 'hosted' | 'otlp' | 'webhook' | 'auto';
 
 export interface AuditConfig {
   enabled: boolean;
