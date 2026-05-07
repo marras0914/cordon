@@ -73,6 +73,14 @@ function renderCallbackPage(kind: 'success' | 'error', heading: string, body: st
       padding: 1px 6px; border-radius: 3px; font-size: 0.85em;
       font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
     }
+    .btn {
+      display: inline-block;
+      background: #14b8a6; color: #000;
+      font-weight: 600; padding: 0.65rem 1.25rem;
+      border-radius: 6px; text-decoration: none;
+      margin-top: 1.25rem; transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
     .hint {
       margin-top: 1.75rem; padding-top: 1.5rem;
       border-top: 1px solid #2a2a2a; font-size: 0.85rem; color: #666;
@@ -93,7 +101,7 @@ function renderCallbackPage(kind: 'success' | 'error', heading: string, body: st
 </html>`;
 }
 
-async function listenForCallback(port: number, expectedState: string): Promise<CallbackResult> {
+async function listenForCallback(port: number, expectedState: string, dashboardUrl: string): Promise<CallbackResult> {
   return new Promise((resolve, reject) => {
     const server = createServer((req, res) => {
       const url = new URL(req.url ?? '/', `http://localhost:${port}`);
@@ -117,7 +125,9 @@ async function listenForCallback(port: number, expectedState: string): Promise<C
       }
 
       const body =
-        `<p>Your API key is saved. Return to your terminal to continue.</p>` +
+        `<p>Your API key is saved. Return to your terminal to continue,` +
+        ` or jump straight to your dashboard.</p>` +
+        `<a href="${dashboardUrl}" class="btn">Open dashboard →</a>` +
         `<p class="hint">You can close this tab.</p>`;
       res.writeHead(200, { 'Content-Type': 'text/html' })
         .end(renderCallbackPage('success', "You're logged in", body));
@@ -155,7 +165,7 @@ export async function loginCommand(options: LoginOptions = {}): Promise<void> {
       );
       openBrowser(authUrl);
 
-      const pending = listenForCallback(candidate, state);
+      const pending = listenForCallback(candidate, state, `${endpoint}/dashboard/`);
       port = candidate;
       result = await pending;
       break;
@@ -179,7 +189,11 @@ export async function loginCommand(options: LoginOptions = {}): Promise<void> {
 
   process.stderr.write(`\x1b[32m✓\x1b[0m logged in. API key saved to ~/.cordon/auth.json\n`);
   if (result.signup === 'true') {
-    process.stderr.write(`Welcome to Cordon for MCP. Run \x1b[36mcordon init\x1b[0m next to wire up your MCP servers.\n`);
+    process.stderr.write(
+      `Welcome to Cordon for MCP.\n` +
+      `Dashboard: \x1b[36m${endpoint}/dashboard/\x1b[0m\n` +
+      `Run \x1b[36mcordon init\x1b[0m next to wire up your MCP servers.\n`,
+    );
   }
   // Suppress unused var warning when port is set but not otherwise used
   void port;
