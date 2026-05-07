@@ -116,8 +116,6 @@
     .btn-primary { background: var(--accent); color: #000; }
     .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
 
-    .cta-subnote { color: var(--muted); font-size: 0.85rem; margin-top: 0.75rem; }
-
     /* TERMINAL */
     .terminal {
       background: var(--code-bg);
@@ -359,33 +357,73 @@
   <div class="container">
     <section class="hero">
       <div class="badge">Open Source</div>
-      <h1>Cordon<br/>for MCP</h1>
+      <h1>Your agent reads the database. Then writes it to disk.<br/>Your allowlist approved both.</h1>
       <p>
-        Security gateway for MCP tool calls. Cordon sits between your LLM client
-        and MCP servers — enforcing policies, logging every tool call, and pausing
-        dangerous operations for human approval.
+        That's exfiltration in two steps, and per-tool allowlists can't see it.
+        Cordon tracks the call graph inside an agent turn and blocks the
+        <em>shape</em> of the attack — not just individual tools.
       </p>
       <div class="cta-group">
-        <a class="btn btn-primary" href="https://app.getcordon.com/dashboard/?utm_source=landing">Try the dashboard →</a>
+        <a class="btn btn-primary" href="#quickstart">Get started →</a>
         <a class="btn btn-secondary" href="https://github.com/marras0914/cordon">View on GitHub</a>
       </div>
-      <p class="cta-subnote">Free for individuals · GitHub OAuth · No credit card</p>
 
       <div class="terminal">
-        <span class="line"><span class="t-muted">  ✓  read_data("customers")        </span><span class="t-green">allowed</span></span>
-        <span class="line"><span class="t-muted">  ✓  read_data("sessions")         </span><span class="t-green">allowed</span></span>
+        <span class="line"><span class="t-muted">  ✓  read_database("customers")    </span><span class="t-green">allowed</span></span>
+        <span class="line"><span class="t-muted">  ✓  read_database("sessions")     </span><span class="t-green">allowed</span></span>
         <span class="line">&nbsp;</span>
-        <span class="line"><span class="t-yellow t-bold">  ⚠  APPROVAL REQUIRED</span></span>
-        <span class="line"><span class="t-muted">     Server : demo-db</span></span>
-        <span class="line"><span class="t-muted">     Tool   : execute_sql</span></span>
-        <span class="line"><span class="t-muted">     Args   : { "query": "DELETE FROM sessions WHERE expires_at &lt; NOW()" }</span></span>
-        <span class="line">&nbsp;</span>
-        <span class="line"><span class="t-muted">     [A]pprove  [D]eny</span></span>
-        <span class="line"><span class="t-muted">     &gt; </span><span class="t-bold">_</span></span>
-        <span class="line">&nbsp;</span>
-        <span class="line"><span class="t-red">  ✗  drop_table("users")           blocked by policy</span></span>
-        <span class="line"><span class="t-red">  ✗  delete_file("/var/log/app")   blocked by policy</span></span>
+        <span class="line"><span class="t-red t-bold">  ✗  CALL-GRAPH BLOCK</span></span>
+        <span class="line"><span class="t-muted">     Tool   : write_file</span></span>
+        <span class="line"><span class="t-muted">     Args   : { "path": "/tmp/data.json", "data": "&lt;query results&gt;" }</span></span>
+        <span class="line"><span class="t-muted">     Rule   : read_* → write_file  (same turn)</span></span>
+        <span class="line"><span class="t-muted">     Reason : Potential exfil — read followed by write</span></span>
       </div>
+    </section>
+  </div>
+
+  <!-- SEQUENCE-AWARE POLICIES -->
+  <div class="container">
+    <section>
+      <h2>Sequence-aware policies</h2>
+      <p style="font-size: 1.05rem; max-width: 580px; margin-bottom: 1.5rem;">
+        Glob the names, match the order.
+      </p>
+      <pre><code>policy: {
+  sequences: [
+    {
+      pattern: ['read_*', 'write_file'],
+      action: 'block',
+      reason: 'Potential exfil — read followed by write in same turn'
+    }
+  ]
+}</code></pre>
+
+      <div style="margin-top: 2rem; text-align: center;">
+        <img src="assets/tier1-call-graph-demo.gif"
+             alt="Demo: two read_data calls succeed, write_file then blocked by sequence rule"
+             style="max-width: 100%; width: 720px; border-radius: 8px; border: 1px solid var(--border);" />
+        <p style="color: var(--muted); font-size: 0.85rem; margin-top: 0.75rem;">
+          <code>read_data</code> succeeds. <code>write_file</code> succeeds. The <em>sequence</em> gets caught.
+        </p>
+      </div>
+
+      <p style="color: var(--text); font-size: 0.95rem; margin-top: 2rem; font-weight: 600;">
+        No other MCP gateway does this at the policy layer.
+      </p>
+    </section>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="container">
+    <section>
+      <h2>How it works</h2>
+      <p style="color: var(--muted); max-width: 580px;">
+        Cordon is a transparent proxy. It requires no changes to your existing MCP servers
+        or Claude Desktop config — <code>cordon init</code> handles the wiring.
+      </p>
+      <pre class="arch">Claude Desktop  --stdio--?  <span class="highlight">Cordon</span>  --stdio--?  MCP server A
+                                    --stdio--?  MCP server B
+                                    --stdio--?  MCP server N</pre>
     </section>
   </div>
 
@@ -409,36 +447,6 @@
       <p class="works-with-sub">
         Using an MCP server? If it runs over stdio, Cordon proxies it — no server-side changes required.
       </p>
-    </section>
-  </div>
-
-  <!-- PROBLEM -->
-  <div class="container">
-    <section class="problem">
-      <h2>MCP has no security model</h2>
-      <p>
-        MCP lets LLMs call real tools — query databases, write files, call APIs.
-        That's powerful. But out of the box, there's nothing between the model and
-        your production systems. No audit log. No way to block a class of operations.
-        No human checkpoint before something irreversible runs.
-      </p>
-      <p>
-        You're just trusting the model. Cordon closes that gap.
-      </p>
-    </section>
-  </div>
-
-  <!-- HOW IT WORKS -->
-  <div class="container">
-    <section>
-      <h2>How it works</h2>
-      <p style="color: var(--muted); max-width: 580px;">
-        Cordon is a transparent proxy. It requires no changes to your existing MCP servers
-        or Claude Desktop config — <code>cordon init</code> handles the wiring.
-      </p>
-      <pre class="arch">Claude Desktop  --stdio--?  <span class="highlight">Cordon</span>  --stdio--?  MCP server A
-                                    --stdio--?  MCP server B
-                                    --stdio--?  MCP server N</pre>
     </section>
   </div>
 
@@ -467,21 +475,6 @@
           <h3>Hosted dashboard</h3>
           <p>Centralized audit logs across your team. Manage API keys, view call history, export for compliance.</p>
         </div>
-        <div class="feature">
-          <div class="feature-icon">🔗</div>
-          <h3>Sequence-aware policies</h3>
-          <p>Per-agent rules with call-graph constraints. Block patterns like <em>read database → write to disk</em> — even when each call is individually allowed. The exfil shapes that per-tool rules can't see.</p>
-        </div>
-      </div>
-
-      <!-- Tier 1 demo embed -->
-      <div style="margin-top: 2.5rem; text-align: center;">
-        <img src="assets/tier1-call-graph-demo.gif"
-             alt="Tier 1 demo — read_data succeeds, write_file blocked by call-graph rule"
-             style="max-width: 100%; width: 720px; border-radius: 8px; border: 1px solid var(--border);" />
-        <p style="color: var(--muted); font-size: 0.85rem; margin-top: 0.75rem;">
-          Each call is individually allowed. The <em>sequence</em> gets caught.
-        </p>
       </div>
     </section>
   </div>
@@ -489,7 +482,7 @@
 
   <!-- QUICK START -->
   <div class="container">
-    <section>
+    <section id="quickstart">
       <h2>Get started in 2 minutes</h2>
 
       <div class="step">
@@ -535,7 +528,7 @@ export default defineConfig({
     <section>
       <h2>Design partners</h2>
       <div class="partners">
-        <h3>Deploying AI agents at your company?</h3>
+        <h3>Shipping agents to a team or a customer?</h3>
         <p>
           We're looking for a handful of teams to work closely with as we build out
           the enterprise features — centralized policy management, SSO, compliance exports.
