@@ -1,6 +1,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { GatewayConfig } from '@getcordon/policy';
+import { HTTPLifecycle } from './http.js';
 
 /**
  * Builds an MCP `Server` instance with handlers already registered.
@@ -56,9 +57,7 @@ export function createTransport(
   }
 
   if (resolved.transport === 'http') {
-    throw new Error(
-      'HTTP/SSE transport is not implemented yet — coming in a follow-up commit on this branch.',
-    );
+    return new HTTPLifecycle(resolved);
   }
 
   // Exhaustive switch — TypeScript enforces this never executes.

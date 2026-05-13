@@ -197,14 +197,6 @@ export interface HTTPGatewayConfig {
    * @default '127.0.0.1'
    */
   host?: string;
-  /**
-   * Which HTTP sub-protocols to expose.
-   * - `'sse'` — exposes the `/sse` endpoint (widely supported by n8n today)
-   * - `'streamable'` — exposes the Streamable HTTP endpoint (newer MCP spec)
-   * - `'both'` — expose both, let the client choose
-   * @default 'sse'
-   */
-  protocol?: 'sse' | 'streamable' | 'both';
 }
 
 export type GatewayConfig = StdioGatewayConfig | HTTPGatewayConfig;
