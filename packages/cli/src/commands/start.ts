@@ -26,6 +26,53 @@ function applyAuthDefaults(config: ResolvedConfig): ResolvedConfig {
 
 interface StartOptions {
   config?: string;
+  /** Enable HTTP/Streamable HTTP transport (overrides config.gateway.transport). */
+  http?: boolean;
+  /** Port for HTTP transport (overrides config.gateway.port). */
+  port?: number;
+}
+
+/**
+ * Apply CLI flags + env vars on top of the loaded config so the HTTP transport
+ * can be enabled without editing the config file. Precedence:
+ *   - `--http` flag forces HTTP transport regardless of config.
+ *   - `--port` flag overrides config.gateway.port.
+ *   - authToken comes from config.gateway.authToken if present, otherwise
+ *     the `CORDON_GATEWAY_TOKEN` env var.
+ *   - host comes from config (defaults to localhost in core/transport/http.ts).
+ */
+function applyHttpFlags(config: ResolvedConfig, options: StartOptions): ResolvedConfig {
+  const wantHttp = options.http === true || config.gateway?.transport === 'http';
+  if (!wantHttp) {
+    if (options.port !== undefined) {
+      process.stderr.write(
+        '\x1b[33m[cordon] --port has no effect without --http (or gateway config). Ignoring.\x1b[0m\n',
+      );
+    }
+    return config;
+  }
+
+  const httpConfig = config.gateway?.transport === 'http' ? config.gateway : undefined;
+  const authToken = httpConfig?.authToken ?? process.env.CORDON_GATEWAY_TOKEN;
+
+  if (!authToken) {
+    process.stderr.write(
+      '\x1b[31merror\x1b[0m: HTTP transport requires an auth token.\n' +
+      '  Set `gateway: { transport: "http", authToken: process.env.CORDON_GATEWAY_TOKEN }` in\n' +
+      '  cordon.config.ts, or export `CORDON_GATEWAY_TOKEN` before running `cordon start --http`.\n',
+    );
+    process.exit(1);
+  }
+
+  return {
+    ...config,
+    gateway: {
+      transport: 'http',
+      authToken,
+      ...(options.port !== undefined ? { port: options.port } : httpConfig?.port !== undefined ? { port: httpConfig.port } : {}),
+      ...(httpConfig?.host !== undefined ? { host: httpConfig.host } : {}),
+    },
+  };
 }
 
 export async function startCommand(options: StartOptions): Promise<void> {
@@ -67,6 +114,7 @@ export async function startCommand(options: StartOptions): Promise<void> {
   }
 
   config = applyAuthDefaults(config);
+  config = applyHttpFlags(config, options);
 
   const gateway = new CordonGateway(config);
 

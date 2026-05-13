@@ -15,6 +15,8 @@ program
   .command('start')
   .description('Start the Cordon gateway')
   .option('-c, --config <path>', 'Path to cordon.config.ts')
+  .option('--http', 'Enable HTTP transport (for n8n and other HTTP-speaking MCP clients). Requires CORDON_GATEWAY_TOKEN env var or gateway.authToken in config.')
+  .option('--port <port>', 'Port for HTTP transport (default: 7777)', (v) => Number.parseInt(v, 10))
   .action(startCommand);
 
 program
