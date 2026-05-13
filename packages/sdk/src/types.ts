@@ -161,6 +161,54 @@ export interface CallGraphRule {
   reason?: string;
 }
 
+// ── Gateway (inbound transport) ───────────────────────────────────────────────
+
+/**
+ * Inbound transport — how clients (Claude Desktop, Cursor, n8n, etc.) connect
+ * to this Cordon instance. Stdio is the default and matches the Claude Desktop
+ * spawning pattern. HTTP exposes Cordon as a server that HTTP-speaking clients
+ * (like n8n's MCP Client Tool node) can point at.
+ */
+export interface StdioGatewayConfig {
+  transport: 'stdio';
+}
+
+export interface HTTPGatewayConfig {
+  transport: 'http';
+  /**
+   * Bearer token clients must include in the `Authorization: Bearer <token>`
+   * header on every request. Required for HTTP transport — running an
+   * unauthenticated gateway exposes the policy engine to anyone on the network.
+   *
+   * Read from env var rather than committing the literal value to config.
+   *
+   * @example authToken: process.env.CORDON_GATEWAY_TOKEN
+   */
+  authToken: string;
+  /**
+   * Port to bind.
+   * @default 7777
+   */
+  port?: number;
+  /**
+   * Host interface to bind. Defaults to localhost-only for safety. Set to
+   * `'0.0.0.0'` to expose externally (e.g. for self-hosted Cordon serving
+   * n8n on a different machine).
+   * @default '127.0.0.1'
+   */
+  host?: string;
+  /**
+   * Which HTTP sub-protocols to expose.
+   * - `'sse'` — exposes the `/sse` endpoint (widely supported by n8n today)
+   * - `'streamable'` — exposes the Streamable HTTP endpoint (newer MCP spec)
+   * - `'both'` — expose both, let the client choose
+   * @default 'sse'
+   */
+  protocol?: 'sse' | 'streamable' | 'both';
+}
+
+export type GatewayConfig = StdioGatewayConfig | HTTPGatewayConfig;
+
 // ── Top-level config ──────────────────────────────────────────────────────────
 
 export interface CordonConfig {
@@ -181,6 +229,16 @@ export interface CordonConfig {
    * per-tool policy, never lower it.
    */
   callGraph?: CallGraphRule[];
+  /**
+   * Inbound transport — how clients connect to this Cordon instance. Omit for
+   * stdio (the Claude Desktop default). Set to `{ transport: 'http', ... }`
+   * to expose an HTTP/SSE endpoint for n8n or other HTTP-speaking MCP clients.
+   *
+   * CLI flags (`--http`, `--port`) override this config.
+   *
+   * @default { transport: 'stdio' }
+   */
+  gateway?: GatewayConfig;
 }
 
 // ── Resolved config (internal) ────────────────────────────────────────────────
