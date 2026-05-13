@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.11.0",
-    "@getcordon/policy": "*"
+    "@getcordon/policy": "*",
+    "@getcordon/core": "*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
