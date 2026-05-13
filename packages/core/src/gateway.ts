@@ -1,5 +1,4 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
@@ -11,16 +10,19 @@ import { PolicyEngine } from './policies/engine.js';
 import { UpstreamManager } from './proxy/upstream-manager.js';
 import { Interceptor } from './proxy/interceptor.js';
 import { RateLimiter } from './rate-limiter.js';
+import { createTransport, type TransportLifecycle } from './transport/index.js';
 
 export class CordonGateway {
-  private server: Server;
   private upstream: UpstreamManager;
   private policy: PolicyEngine;
   private approvals: ApprovalManager;
   private audit: AuditLogger;
   private interceptor: Interceptor;
+  private transport?: TransportLifecycle;
+  private readonly config: ResolvedConfig;
 
   constructor(config: ResolvedConfig) {
+    this.config = config;
     this.audit = new AuditLogger(config.audit);
     this.policy = new PolicyEngine(config);
     this.approvals = new ApprovalManager(config.approvals);
@@ -33,14 +35,6 @@ export class CordonGateway {
       this.audit,
       rateLimiter,
     );
-
-    // The front-facing MCP server that Claude Desktop connects to
-    this.server = new Server(
-      { name: 'cordon', version: '0.1.0' },
-      { capabilities: { tools: {} } },
-    );
-
-    this.registerHandlers();
   }
 
   async start(): Promise<void> {
@@ -52,24 +46,40 @@ export class CordonGateway {
       servers: this.upstream.serverNames(),
     });
 
-    // 2. Start the stdio transport — this blocks until the client disconnects
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
+    // 2. Start the inbound transport. For stdio this creates one Server and
+    //    connects it to StdioServerTransport (blocks until client disconnects).
+    //    For HTTP transports (follow-up commit) the listener handles many
+    //    concurrent connections, each with its own Server instance.
+    this.transport = createTransport(this.config.gateway);
+    await this.transport.start(() => this.createServer());
   }
 
   async stop(): Promise<void> {
+    await this.transport?.stop();
     await this.upstream.disconnect();
-    await this.server.close();
     this.audit.log({ event: 'gateway_stopped' });
     this.audit.close();
   }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
-  private registerHandlers(): void {
+  /**
+   * Build a fresh MCP Server with handlers registered. Called once per
+   * inbound connection — once total for stdio, once per session for HTTP.
+   */
+  private createServer(): Server {
+    const server = new Server(
+      { name: 'cordon', version: '0.1.0' },
+      { capabilities: { tools: {} } },
+    );
+    this.registerHandlers(server);
+    return server;
+  }
+
+  private registerHandlers(server: Server): void {
     // tools/list — return the merged tool registry, with `hidden`-policy
     // tools filtered out so the model never sees them.
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+    server.setRequestHandler(ListToolsRequestSchema, async () => {
       const tools = this.upstream
         .getTools()
         .filter((t) => !this.policy.isHidden(t.serverName, t.originalName))
@@ -82,7 +92,7 @@ export class CordonGateway {
     });
 
     // tools/call — intercept, apply policy, forward if allowed
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return this.interceptor.handle(
         request.params.name,
         request.params.arguments ?? {},
