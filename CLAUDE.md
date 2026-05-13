@@ -158,7 +158,7 @@ If a future publish 403's with no obvious cause, run a stub-README publish to co
 
 ## What's Not Built Yet (v1 deferred)
 
-- HTTP/SSE transport (stdio only for now)
+- Multi-tenant HTTP gateway (single-tenant HTTP/Streamable HTTP shipping in `feat/http-sse-transport` — see `packages/core/src/transport/`)
 - OTLP audit output
 - Dynamic policy reload (requires restart)
 - Tool argument-level policies

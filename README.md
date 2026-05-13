@@ -320,7 +320,7 @@ One-way ratchet — tighten only, never loosen.
 
 **v1 scoping (read this if you're shipping per-agent policies in production):**
 
-In stdio mode, one Cordon process serves one agent — so `agentId` identifies *this deployment*, not a per-call runtime identity. Every spawned Cordon process is one agent. The HTTP/SSE multi-agent gateway (where one Cordon instance can host many agents with distinct policies) is queued immediately after this — `agentId` will gain an HTTP-header source then, no config rewrite needed.
+In stdio mode (and in the current single-tenant HTTP mode), one Cordon process serves one agent identity — so `agentId` in config identifies *this deployment*, not a per-call runtime identity. The multi-tenant HTTP gateway (where one Cordon instance hosts many agents with distinct policies) is still queued — `agentId` will gain an HTTP-header source then, no config rewrite needed.
 
 `lastTool` advances **only on a clean upstream return**. Blocked, denied, and transport-failed calls don't advance the chain. v1 doesn't catch probing — an adversary that attempts `fs:delete` (blocked) and then `http:post` will see `http:post` evaluated against whatever came before the probe, not the probe itself. We chose this on purpose: tracking every blocked attempt false-positives too aggressively on legitimate flows that get blocked once and continue. Revisit when there's real adversarial-misuse data.
 
@@ -339,6 +339,40 @@ After:   Claude ──▶ Cordon ──▶ MCP Server A (governed)
 ```
 
 Your LLM client and MCP servers don't change at all. `cordon init` handles the config patching.
+
+### HTTP Transport (n8n and other HTTP-speaking MCP clients)
+
+For clients that talk MCP over HTTP — n8n's MCP Client Tool node, hosted agents that can't spawn child processes, anything else that wants a network endpoint — Cordon can run as an HTTP listener instead of stdio.
+
+```bash
+export CORDON_GATEWAY_TOKEN=your-secret-token
+npx @getcordon/cli start --http --port 7777
+# [cordon] HTTP gateway listening on http://127.0.0.1:7777/mcp
+```
+
+Or set it in your config:
+
+```typescript
+import { defineConfig } from '@getcordon/policy';
+
+export default defineConfig({
+  servers: [ /* your upstream MCP servers */ ],
+  gateway: {
+    transport: 'http',
+    authToken: process.env.CORDON_GATEWAY_TOKEN!,
+    port: 7777,
+    host: '127.0.0.1',  // localhost-only by default; set to '0.0.0.0' to expose externally
+  },
+});
+```
+
+Clients connect to `http://your-host:7777/mcp` with an `Authorization: Bearer <your-token>` header. The transport implements the [MCP Streamable HTTP spec](https://modelcontextprotocol.io/) — one endpoint serves both SSE response streams and direct JSON responses, with session multiplexing handled by session IDs in headers.
+
+All policy enforcement, audit logging, and approval workflows work identically across transports — only the wire protocol changes.
+
+**Connecting from n8n.** Point the MCP Client Tool node at your Cordon URL with the Bearer token as the credential. The deprecated SSE-only endpoint shape (older n8n versions on the legacy MCP SSE spec) is not implemented — Cordon ships only the current Streamable HTTP transport, which n8n is migrating to.
+
+**Single-tenant.** The current HTTP transport is single-tenant: all sessions share the same upstream MCP servers, policy config, and auth token. A multi-tenant hosted gateway (per-call `agentId` from headers, per-tenant policy) is on the roadmap.
 
 ---
 
@@ -414,7 +448,8 @@ Policies can be set at the server level (default for all tools) or per-tool (ove
 - [x] Rate limiting — sliding window, global / per-server / per-tool
 - [x] Hosted dashboard — audit log history, CSV/JSON export, GitHub OAuth, free for individuals
 - [x] Per-agent policies + call-graph constraints — sequence-aware blocking with additive severity *(in `main`; ships in v0.2.0)*
-- [ ] HTTP/SSE transport support — multi-agent gateway, per-call `agentId` from headers
+- [x] HTTP/Streamable HTTP transport — single-tenant gateway for n8n and HTTP-speaking MCP clients
+- [ ] Multi-tenant HTTP gateway — many agents on one Cordon instance with per-call `agentId` from headers
 - [ ] OpenTelemetry export
 - [ ] Team accounts and centralized governance
 
