@@ -12,6 +12,8 @@ Three Node scripts that prove Cordon proxies [Agent Toolbelt's MCP server](https
 
 If stage **03** passes, Cordon's audit log is capturing real Agent Toolbelt traffic end to end on your machine.
 
+There's also a fourth, optional script — `capture-dashboard-screenshot.mjs` — that runs the same chain but with `audit.output: 'hosted'` so the event lands in your dashboard at `app.getcordon.com` instead of stderr. Useful for verifying your hosted setup works, or for generating a real screenshot of your audit log.
+
 ## Quickstart
 
 ```bash
