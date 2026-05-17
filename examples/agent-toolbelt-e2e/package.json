@@ -1,0 +1,18 @@
+{
+  "name": "cordon-agent-toolbelt-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end verification that Cordon proxies Agent Toolbelt's MCP server correctly. Companion to the dev.to walkthrough.",
+  "scripts": {
+    "verify": "powershell -ExecutionPolicy Bypass -File ./run-all.ps1",
+    "verify:01": "node 01-toolbelt-direct.mjs",
+    "verify:02": "node 02-cordon-stdio.mjs",
+    "verify:03": "node 03-cordon-http-audit.mjs"
+  },
+  "dependencies": {
+    "@getcordon/cli": "^0.3.0",
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "agent-toolbelt-mcp": "^1.0.12"
+  }
+}
