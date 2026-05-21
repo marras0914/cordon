@@ -1,0 +1,49 @@
+{
+  "manifest_version": "0.3",
+  "name": "cordon-mcp-gateway",
+  "display_name": "Cordon for MCP",
+  "version": "0.3.0",
+  "description": "Security gateway for MCP. Audit logging, policy enforcement, and human-in-the-loop approvals over any stdio MCP server.",
+  "long_description": "Cordon is an MCP security gateway. It sits between your MCP client and any number of upstream MCP servers, logs every tool call, and lets you write policies that block or pause calls before they fire.\n\nThis bundle ships a default config that proxies @modelcontextprotocol/server-filesystem with audit logging enabled. The filesystem directory is configurable at install time.\n\nTo enable hosted audit streaming on app.getcordon.com, run `cordon login` in a separate terminal. The gateway auto-upgrades on next start.\n\nTo add more upstream MCP servers, gate writes, block specific tools, or wire up Slack approvals, swap the bundled `server/cordon.config.ts` for your own. See getcordon.com for examples.",
+  "author": {
+    "name": "Marco Arras"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marras0914/cordon"
+  },
+  "homepage": "https://getcordon.com",
+  "documentation": "https://github.com/marras0914/cordon#readme",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "security",
+    "gateway",
+    "proxy",
+    "audit-log",
+    "policy",
+    "human-in-the-loop",
+    "ai-agent"
+  ],
+  "tools_generated": true,
+  "user_config": {
+    "filesystem_dir": {
+      "type": "directory",
+      "title": "Filesystem directory",
+      "description": "Directory the bundled filesystem MCP server is allowed to read and write. Defaults to your Documents folder. Edit server/cordon.config.ts after install to add more upstream servers or tighter policies.",
+      "required": false,
+      "default": "${DOCUMENTS}"
+    }
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"],
+      "env": {
+        "CORDON_FILESYSTEM_DIR": "${user_config.filesystem_dir}"
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+# Built bundle artifact
+*.mcpb
+
+# Smoke test scratch
+_smoke-test.mjs
+_unpacked/

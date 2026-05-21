@@ -1,0 +1,14 @@
+{
+  "name": "cordon-mcpb-bundle",
+  "version": "0.3.0",
+  "description": "MCPB bundle source for the Cordon for MCP Smithery listing. Builds to cordon.mcpb via `mcpb pack`.",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@getcordon/cli": "0.3.0",
+    "@getcordon/policy": "0.2.10"
+  },
+  "devDependencies": {
+    "@anthropic-ai/mcpb": "^2.1.2"
+  }
+}
