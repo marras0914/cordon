@@ -3,7 +3,7 @@
   "name": "io.github.marras0914/cordon",
   "title": "Cordon for MCP",
   "description": "Cordon for MCP. Security gateway with policy enforcement, audit log, and HITL approvals.",
-  "version": "0.1.17",
+  "version": "0.3.0",
   "websiteUrl": "https://getcordon.com",
   "repository": {
     "url": "https://github.com/marras0914/cordon",
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@getcordon/cli",
-      "version": "0.1.17",
+      "version": "0.3.0",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
