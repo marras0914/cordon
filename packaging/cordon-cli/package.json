@@ -1,0 +1,27 @@
+{
+  "name": "cordon-cli",
+  "version": "0.1.19",
+  "description": "DEPRECATED — Cordon CLI has moved to @getcordon/cli. Run: npm install -g @getcordon/cli",
+  "bin": {
+    "cordon": "bin/cordon.js"
+  },
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "deprecated",
+    "cordon",
+    "mcp"
+  ],
+  "license": "MIT",
+  "author": "marras0914",
+  "homepage": "https://getcordon.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marras0914/cordon.git",
+    "directory": "packaging/cordon-cli"
+  },
+  "deprecated": "cordon-cli has been renamed. Run: npm install -g @getcordon/cli"
+}
