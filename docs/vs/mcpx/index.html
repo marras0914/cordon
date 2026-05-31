@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cordon vs MCPX — Open-Source MCP Gateway Comparison</title>
+  <meta name="description" content="Cordon vs MCPX (Lunar.dev): a direct comparison of two MCP gateways. Cordon adds synchronous human approval before tool calls run. MCPX is an enterprise team gateway with automated policy only. Free to install in 2 minutes, no Docker required." />
+  <link rel="canonical" href="https://getcordon.com/vs/mcpx/" />
+  <meta property="og:title" content="Cordon vs MCPX — Open-Source MCP Gateway Comparison" />
+  <meta property="og:description" content="Cordon vs MCPX: side-by-side comparison. Human-in-the-loop approvals, no Docker, free and open source vs enterprise team gateway." />
+  <meta property="og:url" content="https://getcordon.com/vs/mcpx/" />
+  <meta property="og:type" content="article" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' fill='%2314b8a6'>◈</text></svg>" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is the difference between Cordon and MCPX?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Cordon and MCPX are both MCP gateways but serve different use cases. Cordon is built around synchronous human-in-the-loop approvals: a dangerous tool call pauses and waits for a person to approve or deny before anything runs. MCPX (Lunar.dev) is an enterprise team gateway focused on automated policy enforcement, RBAC, and Kubernetes deployment — it has no synchronous human approval mechanism. Cordon installs in 2 minutes via npm with no Docker or Kubernetes required and is free and open source. MCPX targets teams and requires enterprise pricing."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is there an open-source alternative to MCPX?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Cordon is a free, MIT-licensed MCP gateway that installs with a single npm command and requires no Docker or Kubernetes. Unlike MCPX, Cordon adds synchronous human approval for dangerous tool calls, call-graph sequence-aware policies, and a full audit log. It works with Claude Desktop, Cursor, Windsurf, and any stdio MCP client."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which MCP gateway supports human-in-the-loop approval?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Cordon is the only MCP gateway built around synchronous human-in-the-loop approval. When a tool call matches an 'approve' policy, the agent pauses and waits. A human sees the tool name, arguments, and context, then types A to approve or D to deny in the terminal or via Slack. The agent resumes only after that decision. MCPX, Kong, Docker MCP Gateway, and other enterprise gateways enforce automated allow/block policies only — there is no synchronous human checkpoint."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does Cordon require Docker or Kubernetes like MCPX?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. Cordon runs as a local Node process. Install it with npm install -g @getcordon/cli, then run cordon init to auto-patch Claude Desktop and generate a config file. No Docker, no Kubernetes, no container runtime required. MCPX is designed for Kubernetes or Docker-based team deployments."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Cordon free?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. The Cordon CLI, proxy core, and policy SDK are MIT-licensed and free. There is an optional hosted dashboard (app.getcordon.com) for centralized audit logs and team management, which has a paid tier. The core gateway functionality — policy enforcement, human approval, audit logging to a local file — is entirely free."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --border: #2a2a2a;
+      --text: #e8e8e8;
+      --muted: #888;
+      --accent: #14b8a6;
+      --code-bg: #1a1a1a;
+      --green: #4ade80;
+      --yellow: #fbbf24;
+      --red: #f87171;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .logo span { color: var(--accent); }
+
+    nav .links { display: flex; gap: 1.5rem; font-size: 0.9rem; color: var(--muted); }
+    nav .links a { color: var(--muted); }
+    nav .links a:hover { color: var(--text); text-decoration: none; }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    section { padding: 4rem 0; }
+    section + section { border-top: 1px solid var(--border); }
+
+    .hero { padding: 5rem 0 4rem; }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      padding: 0.2rem 0.6rem;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-size: clamp(1.8rem, 5vw, 2.75rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin-bottom: 2rem;
+    }
+
+    .cta-group { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.65rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.25rem 1.5rem;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      margin-top: 1rem;
+      line-height: 1.7;
+    }
+
+    code { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 0.875em; }
+
+    .step { margin-top: 2rem; }
+    .step-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    /* TERMINAL */
+    .terminal {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      margin-top: 2rem;
+      overflow-x: auto;
+    }
+
+    .terminal .line { display: block; }
+    .t-green { color: var(--green); }
+    .t-yellow { color: var(--yellow); }
+    .t-red { color: var(--red); }
+    .t-muted { color: var(--muted); }
+    .t-bold { font-weight: 700; }
+    .t-accent { color: var(--accent); }
+
+    /* COMPARISON TABLE */
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 2rem;
+      font-size: 0.9rem;
+    }
+
+    .compare-table th {
+      text-align: left;
+      padding: 0.75rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .compare-table th.col-cordon { color: var(--accent); }
+
+    .compare-table td {
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      vertical-align: top;
+    }
+
+    .compare-table td.feature-name {
+      color: var(--text);
+      font-weight: 500;
+      background: var(--surface);
+    }
+
+    .compare-table td.cordon-val { color: var(--text); }
+
+    .check { color: var(--green); font-weight: 700; }
+    .cross { color: var(--red); }
+    .neutral { color: var(--muted); }
+
+    /* CALLOUT */
+    .callout {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 6px;
+      padding: 1.25rem 1.5rem;
+      margin-top: 2rem;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .callout strong { color: var(--text); }
+
+    /* WHEN TO USE */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    @media (max-width: 640px) {
+      .two-col { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+
+    .card h3 { margin-bottom: 0.75rem; }
+
+    .card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .card ul li {
+      font-size: 0.9rem;
+      color: var(--muted);
+      padding-left: 1.25rem;
+      position: relative;
+    }
+
+    .card ul li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+    }
+
+    /* FAQ */
+    .faq { display: flex; flex-direction: column; gap: 1.5rem; margin-top: 2rem; }
+
+    .faq-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+
+    .faq-item h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .faq-item p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); text-decoration: none; }
+  </style>
+
+  <!-- Privacy-friendly analytics by Plausible -->
+  <script async src="https://plausible.io/js/pa--COeFWp_3cnlwJ8_r4pNP.js"></script>
+  <script>
+    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+    plausible.init()
+  </script>
+</head>
+<body>
+
+  <nav class="container">
+    <a href="/" class="logo">cor<span>don</span></a>
+    <div class="links">
+      <a href="https://github.com/marras0914/cordon">GitHub</a>
+      <a href="https://app.getcordon.com/dashboard/">Dashboard</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="container">
+    <section class="hero">
+      <div class="badge">Comparison</div>
+      <h1>Cordon vs MCPX</h1>
+      <p>
+        Both are MCP gateways. They solve different problems. MCPX is built for teams enforcing
+        automated policy on Kubernetes. Cordon is built for developers who want a human in the
+        decision loop before dangerous tool calls run — installed in two minutes, no Docker required.
+      </p>
+      <div class="cta-group">
+        <a class="btn btn-primary" href="/#quickstart">Get started with Cordon →</a>
+        <a class="btn btn-secondary" href="https://github.com/marras0914/cordon">View on GitHub</a>
+      </div>
+    </section>
+  </div>
+
+  <!-- THE CORE DIFFERENCE -->
+  <div class="container">
+    <section>
+      <h2>The core difference</h2>
+      <p style="color: var(--muted); max-width: 640px;">
+        MCPX enforces policy automatically: allow or block against a ruleset, no human in the
+        loop. Cordon can do that too, but its defining feature is something neither MCPX nor any
+        other MCP gateway does: <strong style="color: var(--text);">synchronous human approval</strong>.
+        The agent pauses, a person decides, and only then does the tool call run or get blocked.
+      </p>
+
+      <div class="terminal">
+        <span class="line"><span class="t-muted">  ✓  read_database("users")       </span><span class="t-green">allowed</span></span>
+        <span class="line">&nbsp;</span>
+        <span class="line"><span class="t-yellow t-bold">  ?  APPROVAL REQUIRED</span></span>
+        <span class="line"><span class="t-muted">     Tool   : delete_rows</span></span>
+        <span class="line"><span class="t-muted">     Args   : { "table": "users", "where": "created_at &lt; '2024-01-01'" }</span></span>
+        <span class="line"><span class="t-muted">     Policy : approve-writes</span></span>
+        <span class="line">&nbsp;</span>
+        <span class="line"><span class="t-muted">  Approve [A] / Deny [D]:&nbsp;</span><span class="t-accent t-bold">_</span></span>
+        <span class="line">&nbsp;</span>
+        <span class="line"><span class="t-muted">  The agent is waiting. Nothing runs until you decide.</span></span>
+      </div>
+
+      <div class="callout" style="margin-top: 2rem;">
+        <strong>Why this matters:</strong> automated allow/block rules can't anticipate every
+        context. When an agent calls <code>delete_rows</code>, the correct answer depends on
+        <em>what</em> it's deleting and <em>why</em> — information a static rule can't evaluate.
+        A human checkpoint costs 10 seconds and catches the cases a ruleset misses.
+      </div>
+    </section>
+  </div>
+
+  <!-- COMPARISON TABLE -->
+  <div class="container">
+    <section>
+      <h2>Feature comparison</h2>
+      <p style="color: var(--muted); max-width: 640px; margin-bottom: 0.5rem;">
+        As of mid-2026, based on published documentation. Verify current MCPX features at
+        <a href="https://lunar.dev" target="_blank" rel="noopener">lunar.dev</a>.
+      </p>
+
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th class="col-cordon">Cordon</th>
+            <th>MCPX (Lunar.dev)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="feature-name">Human-in-the-loop approval</td>
+            <td class="cordon-val"><span class="check">✓</span> Synchronous — agent pauses until a person decides</td>
+            <td><span class="cross">✗</span> Automated policy only</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Installation</td>
+            <td class="cordon-val"><span class="check">✓</span> <code>npm install -g @getcordon/cli</code> — 2 minutes</td>
+            <td><span class="neutral">—</span> Kubernetes / Docker deployment</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Pricing</td>
+            <td class="cordon-val"><span class="check">✓</span> Free and open source (MIT). Optional hosted dashboard.</td>
+            <td><span class="neutral">—</span> Enterprise pricing / contact sales</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Policy enforcement</td>
+            <td class="cordon-val"><span class="check">✓</span> allow / block / approve / approve-writes / log-only per tool</td>
+            <td><span class="check">✓</span> Automated allow/block rules, RBAC</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Call-graph / sequence policies</td>
+            <td class="cordon-val"><span class="check">✓</span> Block patterns like <code>read_* → write_file</code> in the same turn</td>
+            <td><span class="cross">✗</span> Per-tool rules only</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Audit log</td>
+            <td class="cordon-val"><span class="check">✓</span> Every call, every arg, policy decision, timestamp — file or hosted</td>
+            <td><span class="check">✓</span> Call logging</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Approval via Slack</td>
+            <td class="cordon-val"><span class="check">✓</span> Slack approval channel supported</td>
+            <td><span class="cross">✗</span> Not applicable — no HITL model</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Works without a team / IDP</td>
+            <td class="cordon-val"><span class="check">✓</span> Single-developer use case, no SSO or IDP required</td>
+            <td><span class="cross">✗</span> Designed for team/enterprise deployments</td>
+          </tr>
+          <tr>
+            <td class="feature-name">MCP clients supported</td>
+            <td class="cordon-val"><span class="check">✓</span> Claude Desktop, Cursor, Windsurf, VS Code, any stdio client</td>
+            <td><span class="check">✓</span> HTTP/SSE-based clients</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Open source</td>
+            <td class="cordon-val"><span class="check">✓</span> MIT — <a href="https://github.com/marras0914/cordon">github.com/marras0914/cordon</a></td>
+            <td><span class="neutral">—</span> Closed source</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <!-- WHEN TO USE EACH -->
+  <div class="container">
+    <section>
+      <h2>When to use each</h2>
+
+      <div class="two-col">
+        <div class="card" style="border-color: var(--accent);">
+          <h3 style="color: var(--accent);">Use Cordon when</h3>
+          <ul>
+            <li>You want a human to approve dangerous tool calls before they run</li>
+            <li>You're a solo developer or small team without a Kubernetes cluster</li>
+            <li>You need call-graph sequence policies (block read-then-write patterns)</li>
+            <li>You want to be up and running in under 5 minutes</li>
+            <li>You need something free and self-hostable</li>
+            <li>You're securing Claude Desktop, Cursor, or Windsurf locally</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3 style="color: var(--muted);">Use MCPX when</h3>
+          <ul>
+            <li>You're deploying a team gateway on Kubernetes or Docker</li>
+            <li>You need SSO / IDP integration and centralized RBAC</li>
+            <li>Automated policy enforcement without human intervention is sufficient</li>
+            <li>You're buying enterprise tooling with a vendor support contract</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- GET STARTED -->
+  <div class="container">
+    <section id="quickstart">
+      <h2>Get started with Cordon</h2>
+      <p style="color: var(--muted); max-width: 580px;">
+        Three commands. No Docker, no Kubernetes. Works with Claude Desktop out of the box.
+      </p>
+
+      <div class="step">
+        <div class="step-label">Step 1 — Install</div>
+        <pre><code>npm install -g @getcordon/cli</code></pre>
+      </div>
+
+      <div class="step">
+        <div class="step-label">Step 2 — Initialize (auto-patches Claude Desktop)</div>
+        <pre><code>cordon init</code></pre>
+      </div>
+
+      <div class="step">
+        <div class="step-label">Step 3 — Configure your policy</div>
+        <pre><code>// cordon.config.ts
+import { defineConfig } from '@getcordon/policy';
+
+export default defineConfig({
+  servers: [
+    {
+      name: 'database',
+      transport: 'stdio',
+      command: 'npx',
+      args: ['-y', '@my-org/db-mcp'],
+      policy: 'approve-writes',         // reads pass; writes pause for approval
+      tools: {
+        drop_table: { action: 'block' }, // this one never runs, full stop
+      },
+    },
+  ],
+  approvals: { channel: 'terminal' },   // or 'slack'
+  audit: { enabled: true },
+});</code></pre>
+      </div>
+
+      <div class="step">
+        <div class="step-label">Step 4 — Start</div>
+        <pre><code>cordon start</code></pre>
+      </div>
+
+      <div class="callout">
+        From here, any write operation your agent attempts pauses at the Cordon layer.
+        You see the tool name, arguments, and which policy triggered — then type <strong>A</strong> to
+        approve or <strong>D</strong> to deny. The agent resumes only after your decision.
+      </div>
+    </section>
+  </div>
+
+  <!-- FAQ -->
+  <div class="container">
+    <section>
+      <h2>FAQ</h2>
+      <div class="faq">
+
+        <div class="faq-item">
+          <h3>What is the difference between Cordon and MCPX?</h3>
+          <p>
+            Cordon is built around synchronous human-in-the-loop approval: dangerous tool calls
+            pause and wait for a person before running. MCPX is an enterprise team gateway built for
+            Kubernetes deployments with automated RBAC and policy enforcement. MCPX has no synchronous
+            human approval mechanism. Cordon requires no Docker or Kubernetes and is free and open source.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Is there an open-source alternative to MCPX?</h3>
+          <p>
+            Yes — Cordon. It is MIT-licensed, installs with a single npm command, and requires no
+            infrastructure. It covers automated allow/block policies, call-graph sequence rules, full
+            audit logging, and adds synchronous human approval that MCPX does not have. Source:
+            <a href="https://github.com/marras0914/cordon">github.com/marras0914/cordon</a>.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Does the agent actually wait during a human approval?</h3>
+          <p>
+            Yes. Cordon intercepts the tool call before it reaches the MCP server. The agent's turn
+            is suspended — no tool call fires, no result is returned — until a person types A or D.
+            There is no polling loop or eventual consistency. The approval is synchronous.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Does Cordon require Docker or Kubernetes?</h3>
+          <p>
+            No. Cordon runs as a local Node process. Install via npm, run <code>cordon init</code>
+            to auto-patch Claude Desktop, and start it with <code>cordon start</code>. No containers,
+            no cluster, no runtime besides Node.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Is Cordon free?</h3>
+          <p>
+            The CLI, proxy core, and policy SDK are MIT-licensed and free. An optional hosted
+            dashboard at <a href="https://app.getcordon.com/dashboard/">app.getcordon.com</a> provides
+            centralized audit logs and team management with a paid tier. The local gateway — including
+            human approval, policy enforcement, and file-based audit logging — is entirely free.
+          </p>
+        </div>
+
+      </div>
+    </section>
+  </div>
+
+  <!-- CTA -->
+  <div class="container">
+    <section>
+      <h2>Try Cordon</h2>
+      <p style="color: var(--muted); max-width: 560px;">
+        Open source, free to install, no Docker required. If you want a human in the loop before
+        your agent does something it can't undo — Cordon is the only MCP gateway built for that.
+      </p>
+      <div class="cta-group" style="margin-top: 1.5rem;">
+        <a class="btn btn-primary" href="/#quickstart">Get started in 2 minutes →</a>
+        <a class="btn btn-secondary" href="https://github.com/marras0914/cordon">View on GitHub</a>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <a href="https://github.com/marras0914/cordon">GitHub</a> &nbsp;·&nbsp;
+    <a href="https://www.npmjs.com/package/@getcordon/cli">npm</a> &nbsp;·&nbsp;
+    <a href="https://app.getcordon.com/dashboard/">Dashboard</a> &nbsp;·&nbsp;
+    <a href="/privacy/">Privacy</a> &nbsp;·&nbsp;
+    <a href="/terms/">Terms</a> &nbsp;·&nbsp;
+    <a href="mailto:support@getcordon.com">Support</a>
+    <br/><span style="color: var(--muted); font-size: 0.85em;">&copy; 2026 Elephant Tortoise LLC</span>
+  </footer>
+
+</body>
+</html>

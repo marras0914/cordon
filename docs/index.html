@@ -56,6 +56,7 @@
     nav .links { display: flex; gap: 1.5rem; font-size: 0.9rem; color: var(--muted); }
     nav .links a { color: var(--muted); }
     nav .links a:hover { color: var(--text); text-decoration: none; }
+    nav .links .nav-sep { color: var(--border); }
 
     /* LAYOUT */
     .container {
@@ -348,6 +349,10 @@
   <nav class="container">
     <span class="logo">cor<span>don</span></span>
     <div class="links">
+      <a href="/use-cases/human-in-the-loop/">Human-in-the-loop</a>
+      <span class="nav-sep">·</span>
+      <a href="/vs/mcpx/">vs MCPX</a>
+      <span class="nav-sep">·</span>
       <a href="https://github.com/marras0914/cordon">GitHub</a>
       <a href="https://app.getcordon.com/dashboard/">Dashboard</a>
     </div>
@@ -408,7 +413,7 @@
       </div>
 
       <p style="color: var(--text); font-size: 0.95rem; margin-top: 2rem; font-weight: 600;">
-        No other MCP gateway does this at the policy layer.
+        No other MCP gateway does this at the policy layer. <a href="/vs/mcpx/" style="font-weight: 400; font-size: 0.9rem;">See how Cordon compares →</a>
       </p>
     </section>
   </div>
@@ -463,7 +468,7 @@
         <div class="feature">
           <div class="feature-icon">✋</div>
           <h3>Human-in-the-loop approvals</h3>
-          <p>Dangerous operations pause and wait. Approve or deny from the terminal or a Slack channel before anything runs.</p>
+          <p>Dangerous operations pause and wait. Approve or deny from the terminal or a Slack channel before anything runs. <a href="/use-cases/human-in-the-loop/">How it works →</a></p>
         </div>
         <div class="feature">
           <div class="feature-icon">📋</div>

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Human-in-the-Loop MCP — Pause AI Agent Tool Calls for Approval</title>
+  <meta name="description" content="How to pause your AI agent before it runs a dangerous tool call. Cordon adds synchronous human approval to any MCP server — the agent waits, you decide, then it continues. Free, open source, 2-minute install." />
+  <link rel="canonical" href="https://getcordon.com/use-cases/human-in-the-loop/" />
+  <meta property="og:title" content="Human-in-the-Loop MCP — Pause AI Agent Tool Calls for Approval" />
+  <meta property="og:description" content="Cordon adds synchronous human approval to any MCP server. The agent pauses before dangerous tool calls run — you approve or deny, then it continues." />
+  <meta property="og:url" content="https://getcordon.com/use-cases/human-in-the-loop/" />
+  <meta property="og:type" content="article" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' fill='%2314b8a6'>◈</text></svg>" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How do I add human approval before an AI agent runs a tool?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Install Cordon: npm install -g @getcordon/cli. Run cordon init to auto-patch Claude Desktop. In your cordon.config.ts, set the server's policy to 'approve' or 'approve-writes'. When the agent calls a matching tool, Cordon intercepts the call before it reaches the MCP server, shows you the tool name and arguments, and waits. You type A to approve or D to deny. The agent gets the result only after your decision."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does the agent wait while a human approves?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. The approval is synchronous. Cordon intercepts the tool call before it reaches the MCP server and holds it. The agent's turn is suspended — no tool runs, no result is returned — until a human responds. The agent then continues from exactly where it paused, with the approved or denied result."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which MCP gateways support human-in-the-loop approvals?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Cordon is the only MCP gateway built around synchronous human-in-the-loop approval. Enterprise gateways like MCPX (Lunar.dev), Kong, Docker MCP Gateway, and Bifrost enforce automated allow/block policies only — there is no mechanism for a human to review a pending tool call and decide in real time. Cordon adds that checkpoint without requiring Docker, Kubernetes, or an enterprise contract."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I send approvals to Slack instead of the terminal?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Set approvals.channel to 'slack' in cordon.config.ts and provide your Slack webhook. When a tool call requires approval, Cordon posts a message to Slack with the tool name, arguments, and approve/deny buttons. The agent waits until a response comes back through the Slack channel."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I stop an AI agent from dropping database tables?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Two options with Cordon. Set the specific tool to block: tools: { drop_table: { action: 'block' } } — this rejects the call outright. Or set it to approve: tools: { drop_table: { action: 'approve' } } — this pauses and lets you decide in context. The approve option is better when you occasionally do need to run the tool but want a human checkpoint every time."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --border: #2a2a2a;
+      --text: #e8e8e8;
+      --muted: #888;
+      --accent: #14b8a6;
+      --code-bg: #1a1a1a;
+      --green: #4ade80;
+      --yellow: #fbbf24;
+      --red: #f87171;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .logo span { color: var(--accent); }
+
+    nav .links { display: flex; gap: 1.5rem; font-size: 0.9rem; }
+    nav .links a { color: var(--muted); }
+    nav .links a:hover { color: var(--text); text-decoration: none; }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    section { padding: 4rem 0; }
+    section + section { border-top: 1px solid var(--border); }
+
+    .hero { padding: 5rem 0 4rem; }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      padding: 0.2rem 0.6rem;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-size: clamp(1.8rem, 5vw, 2.75rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 600px;
+      margin-bottom: 2rem;
+    }
+
+    .cta-group { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.65rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.25rem 1.5rem;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      margin-top: 1rem;
+      line-height: 1.7;
+    }
+
+    code { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 0.875em; }
+
+    .step { margin-top: 2rem; }
+    .step-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    /* TERMINAL */
+    .terminal {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      margin-top: 2rem;
+      overflow-x: auto;
+    }
+
+    .terminal .line { display: block; }
+    .t-green { color: var(--green); }
+    .t-yellow { color: var(--yellow); }
+    .t-red { color: var(--red); }
+    .t-muted { color: var(--muted); }
+    .t-bold { font-weight: 700; }
+    .t-accent { color: var(--accent); }
+
+    /* CALLOUT */
+    .callout {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 6px;
+      padding: 1.25rem 1.5rem;
+      margin-top: 2rem;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+    .callout strong { color: var(--text); }
+
+    /* COMPARISON TABLE */
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 2rem;
+      font-size: 0.9rem;
+    }
+
+    .compare-table th {
+      text-align: left;
+      padding: 0.75rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .compare-table th.col-cordon { color: var(--accent); }
+
+    .compare-table td {
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      vertical-align: top;
+    }
+
+    .compare-table td.feature-name {
+      color: var(--text);
+      font-weight: 500;
+      background: var(--surface);
+    }
+
+    .compare-table td.cordon-val { color: var(--text); }
+
+    .check { color: var(--green); font-weight: 700; }
+    .cross { color: var(--red); }
+
+    /* USE CASES GRID */
+    .use-cases {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+
+    .use-case {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+    }
+
+    .use-case h3 { font-size: 0.95rem; margin-bottom: 0.4rem; }
+    .use-case p { font-size: 0.875rem; color: var(--muted); }
+
+    /* FAQ */
+    .faq { display: flex; flex-direction: column; gap: 1.5rem; margin-top: 2rem; }
+
+    .faq-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+
+    .faq-item h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .faq-item p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); text-decoration: none; }
+  </style>
+
+  <!-- Privacy-friendly analytics by Plausible -->
+  <script async src="https://plausible.io/js/pa--COeFWp_3cnlwJ8_r4pNP.js"></script>
+  <script>
+    window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+    plausible.init()
+  </script>
+</head>
+<body>
+
+  <nav class="container">
+    <a href="/" class="logo">cor<span>don</span></a>
+    <div class="links">
+      <a href="https://github.com/marras0914/cordon">GitHub</a>
+      <a href="https://app.getcordon.com/dashboard/">Dashboard</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="container">
+    <section class="hero">
+      <div class="badge">Use Case</div>
+      <h1>Pause your AI agent before it does something it can't undo</h1>
+      <p>
+        Cordon sits between your LLM client and your MCP servers. When an agent calls a tool
+        flagged for approval, the call stops. You see exactly what it's about to do — tool name,
+        arguments, context — and decide whether to let it run.
+      </p>
+      <div class="cta-group">
+        <a class="btn btn-primary" href="#setup">Set it up in 3 steps →</a>
+        <a class="btn btn-secondary" href="https://github.com/marras0914/cordon">View on GitHub</a>
+      </div>
+
+      <div class="terminal">
+        <span class="line"><span class="t-muted">  ✓  read_file("schema.sql")         </span><span class="t-green">allowed</span></span>
+        <span class="line"><span class="t-muted">  ✓  query_database("SELECT ...")      </span><span class="t-green">allowed</span></span>
+        <span class="line">&nbsp;</span>
+        <span class="line"><span class="t-yellow t-bold">  ?  APPROVAL REQUIRED</span></span>
+        <span class="line"><span class="t-muted">     Tool   : delete_rows</span></span>
+        <span class="line"><span class="t-muted">     Args   : { "table": "users", "where": "created_at &lt; '2024-01-01'" }</span></span>
+        <span class="line"><span class="t-muted">     Policy : approve-writes on server "database"</span></span>
+        <span class="line">&nbsp;</span>
+        <span class="line"><span class="t-muted">  Approve [A] / Deny [D]:&nbsp;</span><span class="t-accent t-bold">_</span></span>
+        <span class="line">&nbsp;</span>
+        <span class="line"><span class="t-muted">  The agent is paused. Nothing runs until you decide.</span></span>
+      </div>
+    </section>
+  </div>
+
+  <!-- THE PROBLEM -->
+  <div class="container">
+    <section>
+      <h2>The problem with fully automated tool calls</h2>
+      <p style="color: var(--muted); max-width: 640px; margin-bottom: 1rem;">
+        Most MCP setups are binary: a tool is either allowed or blocked. That works for tools
+        you're certain about. It breaks down for tools that are safe in some contexts and
+        dangerous in others.
+      </p>
+      <p style="color: var(--muted); max-width: 640px; margin-bottom: 1rem;">
+        <code>delete_rows</code> is fine when you're cleaning test data. It's not fine when an agent
+        misread the task and is about to wipe your production users table. An allowlist can't
+        tell the difference. You can.
+      </p>
+      <p style="color: var(--muted); max-width: 640px;">
+        A human checkpoint costs 10 seconds. It catches the cases a ruleset misses — and it
+        gives you an exact record of what the agent tried to do and why you approved or denied it.
+      </p>
+
+      <div class="callout">
+        <strong>The Cordon model:</strong> reads pass automatically. Writes pause for approval.
+        Specific tools you designate as always-block never run at all. You set the policy once;
+        Cordon enforces it on every agent turn.
+      </div>
+    </section>
+  </div>
+
+  <!-- WHAT HITL MEANS IN CORDON -->
+  <div class="container">
+    <section>
+      <h2>What human-in-the-loop means in Cordon</h2>
+      <p style="color: var(--muted); max-width: 640px; margin-bottom: 2rem;">
+        The approval is synchronous. Cordon intercepts the tool call at the proxy layer, before
+        it reaches the MCP server. The agent's entire turn is suspended at that point.
+        No tool fires. No result is fabricated. The agent waits.
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem;">
+          <div style="font-size: 1.3rem; margin-bottom: 0.5rem;">1️⃣</div>
+          <h3>Agent calls a tool</h3>
+          <p style="font-size: 0.875rem; color: var(--muted);">The agent makes a <code>tools/call</code> request. Cordon intercepts it before the MCP server sees it.</p>
+        </div>
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem;">
+          <div style="font-size: 1.3rem; margin-bottom: 0.5rem;">2️⃣</div>
+          <h3>Policy check</h3>
+          <p style="font-size: 0.875rem; color: var(--muted);">Cordon checks the tool against your config. If the action is <code>approve</code> or <code>approve-writes</code>, the call is held.</p>
+        </div>
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem;">
+          <div style="font-size: 1.3rem; margin-bottom: 0.5rem;">3️⃣</div>
+          <h3>You see the call</h3>
+          <p style="font-size: 0.875rem; color: var(--muted);">Tool name, all arguments, the policy that triggered. Terminal or Slack — you choose.</p>
+        </div>
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem;">
+          <div style="font-size: 1.3rem; margin-bottom: 0.5rem;">4️⃣</div>
+          <h3>You decide</h3>
+          <p style="font-size: 0.875rem; color: var(--muted);">Type <strong>A</strong> to approve — the tool runs and returns its result. Type <strong>D</strong> to deny — the agent gets an error and can try a different approach.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- SETUP -->
+  <div class="container">
+    <section id="setup">
+      <h2>Set it up in 3 steps</h2>
+      <p style="color: var(--muted); max-width: 580px;">
+        No Docker. No Kubernetes. Works with Claude Desktop out of the box.
+      </p>
+
+      <div class="step">
+        <div class="step-label">Step 1 — Install</div>
+        <pre><code>npm install -g @getcordon/cli</code></pre>
+      </div>
+
+      <div class="step">
+        <div class="step-label">Step 2 — Initialize (auto-patches Claude Desktop)</div>
+        <pre><code>cordon init</code></pre>
+      </div>
+
+      <div class="step">
+        <div class="step-label">Step 3 — Configure approval policy</div>
+        <pre><code>// cordon.config.ts
+import { defineConfig } from '@getcordon/policy';
+
+export default defineConfig({
+  servers: [
+    {
+      name: 'database',
+      transport: 'stdio',
+      command: 'npx',
+      args: ['-y', '@my-org/db-mcp'],
+      policy: 'approve-writes',          // reads pass; writes require approval
+      tools: {
+        drop_table: { action: 'block' }, // this one never runs
+      },
+    },
+  ],
+  approvals: {
+    channel: 'terminal',                 // or 'slack'
+    timeoutMs: 60_000,                   // 60 seconds before auto-deny
+  },
+  audit: { enabled: true },
+});</code></pre>
+      </div>
+
+      <div class="callout" style="margin-top: 2rem;">
+        Run <code>cordon start</code> and restart Claude Desktop. From that point, every write
+        operation your agent attempts arrives in your terminal for a go / no-go before it runs.
+      </div>
+    </section>
+  </div>
+
+  <!-- WHERE A HUMAN CHECKPOINT EARNS ITS PLACE -->
+  <div class="container">
+    <section>
+      <h2>Where a human checkpoint earns its place</h2>
+      <div class="use-cases">
+        <div class="use-case">
+          <h3>Database writes</h3>
+          <p>Reads flow freely. Any insert, update, or delete pauses for approval. You see the exact query args before anything changes.</p>
+        </div>
+        <div class="use-case">
+          <h3>File system access</h3>
+          <p>Let the agent read files without interruption. Block or approve any write — especially useful when an agent might overwrite a config or source file.</p>
+        </div>
+        <div class="use-case">
+          <h3>External API calls</h3>
+          <p>Reads from an API are fine. Any call that sends data outbound, posts to a webhook, or charges an account waits for a go-ahead.</p>
+        </div>
+        <div class="use-case">
+          <h3>Infrastructure commands</h3>
+          <p>Shell execution, deployment commands, and infra changes are often irreversible. A five-second approval is cheaper than a rollback.</p>
+        </div>
+        <div class="use-case">
+          <h3>Email and messaging</h3>
+          <p>Let the agent draft as much as it wants. Any send action pauses so you can read the output before it reaches the recipient.</p>
+        </div>
+        <div class="use-case">
+          <h3>Multi-agent pipelines</h3>
+          <p>One agent hands off to another. Insert a checkpoint before the hand-off tool fires so a human reviews the intermediate state before the next agent runs.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- COMPARISON TABLE -->
+  <div class="container">
+    <section>
+      <h2>Cordon vs a typical MCP gateway</h2>
+      <p style="color: var(--muted); max-width: 600px;">
+        As of mid-2026. Enterprise gateways (MCPX/Lunar.dev, Kong, Docker MCP Gateway, Bifrost)
+        enforce automated policy — allow or block against a ruleset, no human in the loop.
+      </p>
+
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Capability</th>
+            <th class="col-cordon">Cordon</th>
+            <th>Typical enterprise MCP gateway</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="feature-name">Synchronous human approval</td>
+            <td class="cordon-val"><span class="check">✓</span> Agent pauses until you decide</td>
+            <td><span class="cross">✗</span> Automated policy only</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Reads pass automatically</td>
+            <td class="cordon-val"><span class="check">✓</span> <code>approve-writes</code> policy</td>
+            <td><span class="check">✓</span> Configurable allow rules</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Per-tool block list</td>
+            <td class="cordon-val"><span class="check">✓</span> Named tools can be always-block</td>
+            <td><span class="check">✓</span> Rule-based blocking</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Call-graph sequence rules</td>
+            <td class="cordon-val"><span class="check">✓</span> Block read → write patterns in one turn</td>
+            <td><span class="cross">✗</span> Per-tool rules only</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Audit log</td>
+            <td class="cordon-val"><span class="check">✓</span> Every call, arg, decision, timestamp</td>
+            <td><span class="check">✓</span> Call logging</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Install time</td>
+            <td class="cordon-val"><span class="check">✓</span> 2 minutes via npm</td>
+            <td><span class="cross">✗</span> Kubernetes / Docker deployment</td>
+          </tr>
+          <tr>
+            <td class="feature-name">Pricing</td>
+            <td class="cordon-val"><span class="check">✓</span> Free and open source (MIT)</td>
+            <td><span class="cross">✗</span> Enterprise / contact sales</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top: 1.5rem; color: var(--muted); font-size: 0.9rem;">
+        Comparing Cordon to a specific gateway?
+        <a href="/vs/mcpx/">See the Cordon vs MCPX breakdown →</a>
+      </p>
+    </section>
+  </div>
+
+  <!-- FAQ -->
+  <div class="container">
+    <section>
+      <h2>FAQ</h2>
+      <div class="faq">
+
+        <div class="faq-item">
+          <h3>How do I add human approval before an AI agent runs a tool?</h3>
+          <p>
+            Install Cordon (<code>npm install -g @getcordon/cli</code>), run <code>cordon init</code>
+            to auto-patch Claude Desktop, then set <code>policy: 'approve'</code> or
+            <code>policy: 'approve-writes'</code> in your <code>cordon.config.ts</code>. When the
+            agent calls a matching tool, Cordon shows you the tool name and arguments and waits.
+            Type <strong>A</strong> to approve or <strong>D</strong> to deny.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Does the agent actually wait while a human approves?</h3>
+          <p>
+            Yes. The approval is synchronous. Cordon holds the tool call before it reaches the MCP
+            server. The agent's turn is fully suspended — no tool runs, no result is returned —
+            until you respond. The agent then continues from where it paused with the approved or
+            denied result.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Which MCP gateways support human-in-the-loop approvals?</h3>
+          <p>
+            Cordon is the only MCP gateway built around synchronous human-in-the-loop approval.
+            Enterprise gateways (MCPX/Lunar.dev, Kong, Docker MCP Gateway, Bifrost) enforce
+            automated allow/block policies only — there is no mechanism for a human to review and
+            approve a pending tool call in real time.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Can I send approvals to Slack instead of the terminal?</h3>
+          <p>
+            Yes. Set <code>approvals.channel</code> to <code>'slack'</code> in your config and
+            provide your Slack webhook. When a tool call requires approval, Cordon posts to Slack
+            with the tool name, arguments, and approve/deny controls. The agent waits until a
+            response comes back.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h3>How do I stop an AI agent from dropping database tables?</h3>
+          <p>
+            Two options. Set the tool to always block:
+            <code>tools: { drop_table: { action: 'block' } }</code> — the call is rejected
+            every time. Or set it to approve: <code>tools: { drop_table: { action: 'approve' } }</code>
+            — it pauses so you can decide in context. Block is right when the tool should never run.
+            Approve is right when you occasionally need it but want a checkpoint every time.
+          </p>
+        </div>
+
+      </div>
+    </section>
+  </div>
+
+  <!-- CTA -->
+  <div class="container">
+    <section>
+      <h2>Add a human checkpoint to your agent</h2>
+      <p style="color: var(--muted); max-width: 560px;">
+        Free, open source, no Docker required. Two minutes from npm install to your first
+        approval prompt.
+      </p>
+      <div class="cta-group" style="margin-top: 1.5rem;">
+        <a class="btn btn-primary" href="#setup">Get started →</a>
+        <a class="btn btn-secondary" href="https://github.com/marras0914/cordon">View on GitHub</a>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <a href="https://github.com/marras0914/cordon">GitHub</a> &nbsp;·&nbsp;
+    <a href="https://www.npmjs.com/package/@getcordon/cli">npm</a> &nbsp;·&nbsp;
+    <a href="https://app.getcordon.com/dashboard/">Dashboard</a> &nbsp;·&nbsp;
+    <a href="/privacy/">Privacy</a> &nbsp;·&nbsp;
+    <a href="/terms/">Terms</a> &nbsp;·&nbsp;
+    <a href="mailto:support@getcordon.com">Support</a>
+    <br/><span style="color: var(--muted); font-size: 0.85em;">&copy; 2026 Elephant Tortoise LLC</span>
+  </footer>
+
+</body>
+</html>
