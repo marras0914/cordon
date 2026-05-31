@@ -109,6 +109,7 @@
     nav .links { display: flex; gap: 1.5rem; font-size: 0.9rem; }
     nav .links a { color: var(--muted); }
     nav .links a:hover { color: var(--text); text-decoration: none; }
+    nav .links .nav-sep { color: var(--border); }
 
     .container {
       max-width: 900px;
@@ -342,6 +343,10 @@
   <nav class="container">
     <a href="/" class="logo">cor<span>don</span></a>
     <div class="links">
+      <a href="/use-cases/human-in-the-loop/" style="color: var(--accent);">Human-in-the-loop</a>
+      <span class="nav-sep">·</span>
+      <a href="/vs/mcpx/">vs MCPX</a>
+      <span class="nav-sep">·</span>
       <a href="https://github.com/marras0914/cordon">GitHub</a>
       <a href="https://app.getcordon.com/dashboard/">Dashboard</a>
     </div>
