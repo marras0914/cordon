@@ -42,9 +42,11 @@ export interface AuditEntry {
   /**
    * Identifies the call-graph rule (if any) that drove a block/approval.
    * Present on `tool_call_blocked` / `approval_requested` events when a
-   * call-graph rule fired.
+   * call-graph rule fired. `dataFlow` records whether an opaque handle from the
+   * previous tool's response reappeared in this call's args — i.e. whether the
+   * flagged A→B was a real data-flow link or just coincidental ordering.
    */
-  callGraphRule?: { from: string; to: string };
+  callGraphRule?: { from: string; to: string; dataFlow?: boolean };
 }
 
 // ── Output implementations ────────────────────────────────────────────────────

@@ -159,6 +159,21 @@ export interface CallGraphRule {
   action: CallGraphAction;
   /** Reason surfaced when the rule blocks or pauses for approval. */
   reason?: string;
+  /**
+   * When true, this rule only fires if Cordon detects an actual data-flow link
+   * between the two calls — i.e. an opaque handle (id, path, token) from the
+   * `from` tool's response reappears in the `to` tool's arguments. This is the
+   * handle-matching confidence layer: it trades a little recall (it won't catch
+   * side-effect chains where no handle crosses the boundary) for much higher
+   * precision (no false positives on coincidental A-then-B ordering).
+   *
+   * Omit (default `false`) to keep the coarser temporal behavior — the rule
+   * fires on ordering alone. Every firing is annotated in the audit log with
+   * whether a data-flow link was present regardless of this setting.
+   *
+   * @default false
+   */
+  requireDataFlow?: boolean;
 }
 
 // ── Gateway (inbound transport) ───────────────────────────────────────────────

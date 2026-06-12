@@ -3,6 +3,7 @@ import type { ApprovalManager } from '../approvals/manager.js';
 import type { PolicyEngine } from '../policies/engine.js';
 import type { UpstreamManager, ToolCallResponse } from './upstream-manager.js';
 import type { RateLimiter } from '../rate-limiter.js';
+import { extractHandles, findSharedHandles } from '../policies/handle-matcher.js';
 
 /**
  * The hot path. Every tools/call from the LLM client flows through here.
@@ -26,6 +27,13 @@ import type { RateLimiter } from '../rate-limiter.js';
 export class Interceptor {
   /** The previously-executed tool name (bare, not namespaced). `undefined` until the first successful call. */
   private lastToolName: string | undefined;
+  /**
+   * Opaque handles (ids, paths, tokens) extracted from the previous tool's
+   * response. If the current call's args echo any of these, that's a data-flow
+   * link — the confidence layer over the temporal call-graph. Advances in
+   * lockstep with `lastToolName` (only on a clean upstream return).
+   */
+  private lastToolHandles: Set<string> = new Set();
 
   constructor(
     private upstream: UpstreamManager,
@@ -45,6 +53,12 @@ export class Interceptor {
     const { serverName, originalName } = tool;
     const start = Date.now();
     const previousTool = this.lastToolName;
+
+    // Confidence layer: does this call's args echo an opaque handle the previous
+    // tool handed back? A shared handle means real data flowed A → B, not just
+    // coincidental ordering. Feeds call-graph rules that opt into requireDataFlow.
+    const sharedHandles = findSharedHandles(this.lastToolHandles, args);
+    const hasDataFlow = sharedHandles.length > 0;
 
     // 1. Audit
     this.audit.log({
@@ -70,8 +84,9 @@ export class Interceptor {
       return errorResult('Rate limit exceeded');
     }
 
-    // 3. Policy — args drive sql-* policies, lastToolName drives call-graph rules
-    const decision = this.policy.evaluate(serverName, originalName, args, this.lastToolName);
+    // 3. Policy — args drive sql-* policies, lastToolName drives call-graph rules,
+    //    hasDataFlow gates rules that require an actual handle link.
+    const decision = this.policy.evaluate(serverName, originalName, args, this.lastToolName, hasDataFlow);
 
     if (decision.action === 'block') {
       this.audit.log({
@@ -121,6 +136,9 @@ export class Interceptor {
       // Chain advances only on a clean upstream return (success or upstream-reported isError).
       // Thrown errors below do NOT advance — we don't know what happened on the wire.
       this.lastToolName = originalName;
+      // Capture this response's handles so the next call can be checked for a
+      // data-flow link against them. Advances in lockstep with lastToolName.
+      this.lastToolHandles = extractHandles(response);
       this.audit.log({
         event: 'tool_call_completed',
         callId,

@@ -380,5 +380,64 @@ describe('Interceptor', () => {
       expect(approvalEvent).toBeDefined();
       expect(approvalEvent.callGraphRule).toEqual({ from: 'query', to: 'post' });
     });
+
+    it('fires a requireDataFlow rule when a handle crosses from response into next args', async () => {
+      const HANDLE = '550e8400-e29b-41d4-a716-446655440000';
+      const policy = new PolicyEngine(makeConfig({
+        callGraph: [
+          { from: 'read_data', to: 'write_file', action: 'approve', requireDataFlow: true },
+        ],
+      }));
+      const audit = makeAudit();
+      const upstream = makeUpstream({
+        resolve: vi.fn()
+          .mockReturnValueOnce({ serverName: 'db', originalName: 'read_data' })
+          .mockReturnValueOnce({ serverName: 'db', originalName: 'write_file' }),
+        callTool: vi.fn()
+          .mockResolvedValueOnce({ content: [{ type: 'text', text: `record ${HANDLE}` }], isError: false })
+          .mockResolvedValueOnce({ content: [{ type: 'text', text: 'written' }], isError: false }),
+      });
+      const interceptor = new Interceptor(upstream, policy, makeApprovals(true), audit);
+
+      await interceptor.handle('read_data', { table: 'users' });
+      // write_file echoes the id read_data handed back → real data-flow link.
+      await interceptor.handle('write_file', { path: '/tmp/x', id: HANDLE });
+
+      const approvalEvent = (audit.log as ReturnType<typeof vi.fn>).mock.calls
+        .map((c: [{ event: string; toolName?: string; callGraphRule?: { from: string; to: string; dataFlow?: boolean } }]) => c[0])
+        .find((e: { event: string; toolName?: string }) => e.event === 'approval_requested' && e.toolName === 'write_file');
+      expect(approvalEvent).toBeDefined();
+      expect(approvalEvent.callGraphRule).toEqual({ from: 'read_data', to: 'write_file', dataFlow: true });
+    });
+
+    it('does NOT fire a requireDataFlow rule when no handle crosses the boundary', async () => {
+      const HANDLE = '550e8400-e29b-41d4-a716-446655440000';
+      const policy = new PolicyEngine(makeConfig({
+        callGraph: [
+          { from: 'read_data', to: 'write_file', action: 'approve', requireDataFlow: true },
+        ],
+      }));
+      const audit = makeAudit();
+      const upstream = makeUpstream({
+        resolve: vi.fn()
+          .mockReturnValueOnce({ serverName: 'db', originalName: 'read_data' })
+          .mockReturnValueOnce({ serverName: 'db', originalName: 'write_file' }),
+        callTool: vi.fn()
+          .mockResolvedValueOnce({ content: [{ type: 'text', text: `record ${HANDLE}` }], isError: false })
+          .mockResolvedValueOnce({ content: [{ type: 'text', text: 'written' }], isError: false }),
+      });
+      const interceptor = new Interceptor(upstream, policy, makeApprovals(true), audit);
+
+      await interceptor.handle('read_data', { table: 'users' });
+      // Unrelated args — no handle crosses → temporal-only, the rule stays silent.
+      await interceptor.handle('write_file', { path: '/tmp/x', content: 'unrelated' });
+
+      const events = (audit.log as ReturnType<typeof vi.fn>).mock.calls
+        .map((c: [{ event: string; toolName?: string }]) => c[0]);
+      const approval = events.find((e) => e.event === 'approval_requested' && e.toolName === 'write_file');
+      const allowed = events.find((e) => e.event === 'tool_call_allowed' && e.toolName === 'write_file');
+      expect(approval).toBeUndefined();
+      expect(allowed).toBeDefined();
+    });
   });
 });

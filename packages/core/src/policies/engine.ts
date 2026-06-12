@@ -19,6 +19,13 @@ export interface CallGraphMatch {
   from: string;
   /** The `to` glob pattern of the matched rule. */
   to: string;
+  /**
+   * Whether an actual data-flow link was detected between the two calls (an
+   * opaque handle from the `from` tool's response reappeared in this call's
+   * args). Annotated on every call-graph match so the audit log distinguishes a
+   * coincidental ordering from a defensible "B used A's output" finding.
+   */
+  dataFlow?: boolean;
 }
 
 export type PolicyDecision =
@@ -134,9 +141,10 @@ export class PolicyEngine {
     toolName: string,
     args?: unknown,
     lastToolName?: string,
+    hasDataFlow = false,
   ): PolicyDecision {
     const baseDecision = this.evaluateBase(serverName, toolName, args);
-    return this.applyCallGraph(baseDecision, toolName, lastToolName);
+    return this.applyCallGraph(baseDecision, toolName, lastToolName, hasDataFlow);
   }
 
   private evaluateBase(serverName: string, toolName: string, args?: unknown): PolicyDecision {
@@ -160,14 +168,18 @@ export class PolicyEngine {
     baseDecision: PolicyDecision,
     toolName: string,
     lastToolName: string | undefined,
+    hasDataFlow: boolean,
   ): PolicyDecision {
     if (this.callGraphRules.length === 0) return baseDecision;
     if (lastToolName === undefined) return baseDecision;
 
     // Find all rules where (lastToolName matches `from`) AND (toolName matches `to`).
+    // A rule that opts into `requireDataFlow` is skipped unless an actual handle
+    // link was detected between the two calls — that's the confidence gate.
     let bestRule: CallGraphRule | undefined;
     let bestSeverity = -1;
     for (const rule of this.callGraphRules) {
+      if (rule.requireDataFlow && !hasDataFlow) continue;
       if (
         callGraphGlobMatch(lastToolName, rule.from) &&
         callGraphGlobMatch(toolName, rule.to)
@@ -186,15 +198,20 @@ export class PolicyEngine {
     const baseSeverity = CALL_GRAPH_SEVERITY[baseDecision.action];
     if (bestSeverity <= baseSeverity) return baseDecision;
 
-    return this.callGraphDecision(bestRule, toolName, lastToolName);
+    return this.callGraphDecision(bestRule, toolName, lastToolName, hasDataFlow);
   }
 
   private callGraphDecision(
     rule: CallGraphRule,
     toolName: string,
     lastToolName: string,
+    hasDataFlow: boolean,
   ): PolicyDecision {
+    // Only annotate dataFlow when a link was actually detected — absence reads
+    // as "no data-flow link," and keeps the match object minimal for the common
+    // temporal-only case.
     const callGraph: CallGraphMatch = { from: rule.from, to: rule.to };
+    if (hasDataFlow) callGraph.dataFlow = true;
     switch (rule.action) {
       case 'allow':
         // Unreachable in practice — additive logic prevents `allow` from ever

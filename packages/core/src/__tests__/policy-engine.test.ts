@@ -480,4 +480,58 @@ describe('PolicyEngine', () => {
         .toEqual({ action: 'allow' });
     });
   });
+
+  describe('call-graph requireDataFlow (handle-matching layer)', () => {
+    function dataFlowEngine() {
+      return new PolicyEngine(makeConfig({
+        servers: [{ name: 'fs', transport: 'stdio', command: 'npx', args: [], policy: 'allow' }],
+        callGraph: [
+          { from: 'read_data', to: 'write_file', action: 'approve', requireDataFlow: true },
+        ],
+      }));
+    }
+
+    it('does NOT fire a requireDataFlow rule on temporal ordering alone', () => {
+      const engine = dataFlowEngine();
+      // read_data → write_file, but no handle link (hasDataFlow defaults false).
+      expect(engine.evaluate('fs', 'write_file', undefined, 'read_data'))
+        .toEqual({ action: 'allow' });
+    });
+
+    it('fires a requireDataFlow rule when a data-flow link is present', () => {
+      const engine = dataFlowEngine();
+      const result = engine.evaluate('fs', 'write_file', undefined, 'read_data', true);
+      expect(result).toEqual({
+        action: 'approve',
+        callGraph: { from: 'read_data', to: 'write_file', dataFlow: true },
+      });
+    });
+
+    it('annotates dataFlow:true on a plain temporal rule when a link exists', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{ name: 'fs', transport: 'stdio', command: 'npx', args: [], policy: 'allow' }],
+        callGraph: [
+          { from: 'read_data', to: 'write_file', action: 'approve' }, // no requireDataFlow
+        ],
+      }));
+      // Rule fires on ordering; the detected link is recorded for a defensible audit.
+      expect(engine.evaluate('fs', 'write_file', undefined, 'read_data', true)).toEqual({
+        action: 'approve',
+        callGraph: { from: 'read_data', to: 'write_file', dataFlow: true },
+      });
+    });
+
+    it('omits dataFlow on a temporal rule when no link is present', () => {
+      const engine = new PolicyEngine(makeConfig({
+        servers: [{ name: 'fs', transport: 'stdio', command: 'npx', args: [], policy: 'allow' }],
+        callGraph: [
+          { from: 'read_data', to: 'write_file', action: 'approve' },
+        ],
+      }));
+      expect(engine.evaluate('fs', 'write_file', undefined, 'read_data', false)).toEqual({
+        action: 'approve',
+        callGraph: { from: 'read_data', to: 'write_file' },
+      });
+    });
+  });
 });
