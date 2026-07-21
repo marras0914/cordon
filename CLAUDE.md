@@ -156,9 +156,14 @@ npm's malware scanner returns 403 Forbidden ("forbidden by your security policy"
 
 If a future publish 403's with no obvious cause, run a stub-README publish to confirm; if that succeeds, bisect the README content. Likely culprits: any literal SQL injection demo, classic XSS payload (`<script>alert(1)</script>`), shell injection demos (`; rm -rf /`), or similar exploit pattern strings.
 
+## Transport modes (both SHIPPED + published)
+
+- **stdio** (default) — the Claude Desktop / Cursor spawning pattern. `StdioLifecycle`.
+- **HTTP / Streamable HTTP** — SHIPPED and published in `@getcordon/core@0.5.0` (bundled into `dist/index.js`; the build inlines `src/transport/http.ts`, so there's no separate `dist/transport/` file — verify by grepping the bundle for `HTTPLifecycle` / "HTTP gateway listening", not by looking for a file). `createTransport()` in `src/transport/index.ts` selects `HTTPLifecycle` (`src/transport/http.ts`) when `config.gateway.transport === 'http'`; `gateway.ts` invokes it; CLI exposes `--port` (default 7777, path `/mcp`). Bearer-token auth (`Authorization: Bearer <authToken>`, constant-time compare), single-tenant. This is "Architecture A." **Do not re-open the "is HTTP wired?" question — it is, on `main` and on npm.**
+
 ## What's Not Built Yet (v1 deferred)
 
-- Multi-tenant HTTP gateway (single-tenant HTTP/Streamable HTTP shipping in `feat/http-sse-transport` — see `packages/core/src/transport/`)
+- **Multi-tenant** hosted HTTP gateway ("Architecture B" — `gateway.getcordon.com/sse/<id>`, per-tenant routing). The single-tenant HTTP above is done; only the multi-tenant hosted layer is deferred.
 - OTLP audit output
 - Dynamic policy reload (requires restart)
 - Tool argument-level policies
