@@ -163,7 +163,7 @@ If a future publish 403's with no obvious cause, run a stub-README publish to co
 
 ## What's Not Built Yet (v1 deferred)
 
-- **Multi-tenant** hosted HTTP gateway ("Architecture B" — `gateway.getcordon.com/sse/<id>`, per-tenant routing). The single-tenant HTTP above is done; only the multi-tenant hosted layer is deferred.
+- **Multi-tenant** hosted HTTP gateway ("Architecture B" — per-tenant routing behind a hosted endpoint). The single-tenant HTTP above is done; only the multi-tenant hosted layer is deferred.
 - OTLP audit output
 - Dynamic policy reload (requires restart)
 - Tool argument-level policies
@@ -171,7 +171,7 @@ If a future publish 403's with no obvious cause, run a stub-README publish to co
 
 ## Hosted Backend (cordon-server)
 
-Live at `https://app.getcordon.com` (Railway, private GitHub repo `marras0914/cordon-server`).
+Live at `https://app.getcordon.com` (hosted backend, deployed on Railway).
 
 Dashboard: `https://app.getcordon.com/dashboard/` — GitHub OAuth login, users manage their own API keys.
 
@@ -199,18 +199,6 @@ approvals: {
 
 Slack interactions hit `POST /webhooks/slack` — verified via `SLACK_SIGNING_SECRET` env var. `SLACK_BOT_TOKEN` also required on Railway.
 
-## Key Files (cordon-server)
-
-| File | What it does |
-|------|-------------|
-| `src/routes/events.ts` | POST /events (ingest), GET /events (list), GET /events/export (CSV/JSON download) |
-| `src/routes/approvals.ts` | POST/GET pending approvals (polled by CLI) |
-| `src/routes/webhooks.ts` | Slack interaction handler — verifies HMAC, updates approval record |
-| `src/routes/auth.ts` | GitHub OAuth flow, session management |
-| `src/routes/user.ts` | User-scoped API key management |
-| `src/middleware/session.ts` | Session cookie validation |
-| `src/retention.ts` | 30-day event retention job — runs on startup, then hourly |
-
 ## Rate Limiting
 
 `RateLimiter` class in `packages/core/src/rate-limiter.ts`. Sliding window (60s), three dimensions: global, per-server, per-tool. Blocked calls consume no slot. Wired into `Interceptor` — check runs before policy. Activated when `rateLimit` is present in config:
@@ -224,17 +212,9 @@ rateLimit: {
 }
 ```
 
-## Month 3 Targets (April 2026)
+## Feature status
 
-**Done:**
-- Rate limiting engine — `RateLimiter` sliding window, wired into interceptor (62 tests passing)
-- Audit export — `GET /events/export?format=csv|json`, dashboard Export CSV button, live on Railway
-- 30-day log retention — hourly cleanup job running in prod
-- Slack approval channel — committed, tested (14 unit tests)
-- Stripe billing — checkout (Pro $49/mo), customer portal, webhook lifecycle (upgrade/downgrade/cancel), live on Railway
-- Pricing page on getcordon.com — Free + Pro plans with feature breakdown
-- Plan limit enforcement — free: 1 API key, 1K events/mo. Enforced at key creation + event ingestion. Usage endpoint at `GET /user/usage`
-- `@getcordon/core@0.2.0` published 2026-04-08
-
-**Next:**
-- Design partner outreach (LinkedIn posted 2026-03-17, HN posted 2026-03-17 — 3 upvotes, retry needed)
+The shipped feature set (policy engine, call-graph rules, rate limiting, audit
+logging + export, retention, terminal + Slack approvals, both transport modes)
+is documented in the sections above. See `../cordon-deux/memory-bank/` for
+roadmap and status.
