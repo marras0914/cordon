@@ -46,7 +46,7 @@
         "name": "Can I send approvals to Slack instead of the terminal?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Set approvals.channel to 'slack' in cordon.config.ts and provide your Slack webhook. When a tool call requires approval, Cordon posts a message to Slack with the tool name, arguments, and approve/deny buttons. The agent waits until a response comes back through the Slack channel."
+          "text": "Yes. Set approvals.channel to 'slack' in cordon.config.ts and give Cordon a Slack bot token plus the channel. Under the hood it is a small Slack app — a bot token with chat:write, invited to your channel, and Interactivity pointed at your Cordon server so the approve/deny buttons resolve. When a tool call requires approval, Cordon posts a message with the tool name, arguments, and approve/deny buttons, and the agent waits until a response comes back."
         }
       },
       {
@@ -633,9 +633,12 @@ export default defineConfig({
           <h3>Can I send approvals to Slack instead of the terminal?</h3>
           <p>
             Yes. Set <code>approvals.channel</code> to <code>'slack'</code> in your config and
-            provide your Slack webhook. When a tool call requires approval, Cordon posts to Slack
-            with the tool name, arguments, and approve/deny controls. The agent waits until a
-            response comes back.
+            give Cordon a Slack <em>bot token</em> plus the channel. Under the hood it's a small
+            Slack app — a bot token with <code>chat:write</code>, invited to your channel, and
+            Interactivity pointed at your Cordon server so the Approve/Deny buttons resolve. When a
+            tool call requires approval, Cordon posts the tool name, arguments, and approve/deny
+            buttons, and the agent waits until a response comes back. See the Slack approvals setup
+            guide for the exact steps.
           </p>
         </div>
 
