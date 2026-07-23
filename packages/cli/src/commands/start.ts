@@ -9,19 +9,30 @@ function applyAuthDefaults(config: ResolvedConfig): ResolvedConfig {
   const auth = getAuth();
   if (!auth) return config;
 
-  const audit = config.audit;
-  const usesHosted = audit && (audit.output === 'hosted' || (Array.isArray(audit.output) && audit.output.includes('hosted')));
-  if (!usesHosted) return config;
-  if (audit.endpoint && audit.apiKey) return config;
+  let next = config;
 
-  return {
-    ...config,
-    audit: {
-      ...audit,
-      endpoint: audit.endpoint ?? auth.endpoint,
-      apiKey: audit.apiKey ?? auth.apiKey,
-    },
-  };
+  // Hosted audit: fill endpoint/apiKey from auth.json when not already set.
+  const audit = next.audit;
+  const usesHosted =
+    audit && (audit.output === 'hosted' || (Array.isArray(audit.output) && audit.output.includes('hosted')));
+  if (usesHosted && !(audit.endpoint && audit.apiKey)) {
+    next = {
+      ...next,
+      audit: { ...audit, endpoint: audit.endpoint ?? auth.endpoint, apiKey: audit.apiKey ?? auth.apiKey },
+    };
+  }
+
+  // Slack approvals are server-driven — fill endpoint/apiKey so the local side
+  // can register + poll without the user hand-writing them into the config.
+  const approvals = next.approvals;
+  if (approvals?.channel === 'slack' && !(approvals.endpoint && approvals.apiKey)) {
+    next = {
+      ...next,
+      approvals: { ...approvals, endpoint: approvals.endpoint ?? auth.endpoint, apiKey: approvals.apiKey ?? auth.apiKey },
+    };
+  }
+
+  return next;
 }
 
 interface StartOptions {

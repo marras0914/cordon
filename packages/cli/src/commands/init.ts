@@ -173,6 +173,18 @@ export async function initCommand(): Promise<void> {
     output: 'auto',
   },`;
 
+  const approvalsBlock = auth
+    ? `approvals: {
+    // Human-in-the-loop over Slack. Connect your workspace once via
+    // "Add to Slack" in the dashboard — endpoint + apiKey are auto-loaded.
+    channel: 'slack',
+    // timeoutMs: 60_000,
+  },`
+    : `approvals: {
+    channel: 'terminal',
+    // timeoutMs: 60_000,
+  },`;
+
   const content = `import { defineConfig } from '@getcordon/policy';
 
 export default defineConfig({
@@ -182,10 +194,7 @@ ${serverBlocks}
 
   ${auditBlock}
 
-  approvals: {
-    channel: 'terminal',
-    // timeoutMs: 60_000,
-  },
+  ${approvalsBlock}
 });
 `;
 

@@ -85,13 +85,25 @@ export interface ApprovalConfig {
    * Omit for no timeout.
    */
   timeoutMs?: number;
-  /** Slack bot token (xoxb-...). Required when channel is 'slack'. */
+  /**
+   * @deprecated Slack posting is now server-side. Connect a workspace once via
+   * "Add to Slack" in the dashboard; this field is ignored.
+   */
   slackBotToken?: string;
-  /** Slack channel to post approval requests to (e.g. '#cordon-approvals'). Required when channel is 'slack'. */
+  /**
+   * @deprecated Set the default channel in the dashboard after connecting Slack;
+   * this field is ignored.
+   */
   slackChannel?: string;
-  /** Cordon server endpoint for approval polling. Required when channel is 'slack'. */
+  /**
+   * Cordon server endpoint for Slack approvals. Auto-loaded from
+   * ~/.cordon/auth.json after `cordon login` (or shared with hosted audit).
+   */
   endpoint?: string;
-  /** API key for the Cordon server. Required when channel is 'slack'. */
+  /**
+   * API key for the Cordon server. Auto-loaded from ~/.cordon/auth.json after
+   * `cordon login`.
+   */
   apiKey?: string;
 }
 

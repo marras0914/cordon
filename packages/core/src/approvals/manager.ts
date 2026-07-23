@@ -39,14 +39,17 @@ export class ApprovalManager {
       case 'terminal':
         return new TerminalApprovalChannel();
       case 'slack': {
-        const { slackBotToken, slackChannel, endpoint, apiKey } = config ?? {};
-        if (!slackBotToken || !slackChannel || !endpoint || !apiKey) {
+        // Slack posting is server-driven now — the local side only needs the
+        // hosted endpoint + API key (auto-loaded from ~/.cordon/auth.json after
+        // `cordon login`; see applyAuthDefaults in the CLI's start command).
+        const { endpoint, apiKey } = config ?? {};
+        if (!endpoint || !apiKey) {
           process.stderr.write(
-            `[cordon] warn: slack channel requires slackBotToken, slackChannel, endpoint, and apiKey — falling back to terminal\n`,
+            `[cordon] warn: slack channel requires a hosted endpoint + apiKey (run 'cordon login', or set audit.output to 'hosted') — falling back to terminal\n`,
           );
           return new TerminalApprovalChannel();
         }
-        return new SlackApprovalChannel(slackBotToken, slackChannel, endpoint, apiKey);
+        return new SlackApprovalChannel(endpoint, apiKey);
       }
       case 'web':
       case 'webhook':
