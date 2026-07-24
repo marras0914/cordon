@@ -192,6 +192,8 @@ When a tool call requires approval, Cordon pauses the agent and prompts you dire
 
 The agent waits. You decide.
 
+Prefer Slack? Connect your workspace once with **Add to Slack** in the dashboard — no bot token to create or paste — then set `approvals: { channel: 'slack' }`. A flagged call posts an Approve / Deny card to your channel and pauses until a human clicks, and the approver's name is written onto the audit record. See the [Slack approvals setup](docs/slack-approvals-setup.md).
+
 ### Audit Logging
 
 Every tool call is logged as structured JSON — the request, the policy decision, the response, and timing. Pipe to stdout or write to a file for your compliance team.
@@ -410,7 +412,7 @@ Policies can be set at the server level (default for all tools) or per-tool (ove
 | Channel | Status |
 |---|---|
 | `terminal` | Available — interactive prompt in your terminal |
-| `slack` | Available — Block Kit messages, HMAC-verified interactions |
+| `slack` | Available — one-click **Add to Slack** (OAuth), server-posted Block Kit cards, HMAC-verified interactions, approver captured on the record |
 | `web` | Coming in v0.3 |
 | `webhook` | Coming in v0.3 |
 

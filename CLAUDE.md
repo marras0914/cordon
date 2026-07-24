@@ -185,19 +185,22 @@ audit: {
 }
 ```
 
-To use Slack approvals:
+To use Slack approvals (plug-and-play, server-driven since core@0.5.1 / cli@0.4.1):
 ```typescript
 approvals: {
   channel: 'slack',
-  slackBotToken: 'xoxb-...',
-  slackChannel: '#cordon-approvals',
-  endpoint: 'https://app.getcordon.com',
-  apiKey: 'crd_...',
+  // endpoint + apiKey auto-load from ~/.cordon/auth.json after `cordon login`.
+  // No bot token / channel here — the workspace is connected once via
+  // "Add to Slack" in the dashboard and cordon-server posts the card.
   timeoutMs: 60_000,
 }
 ```
 
-Slack interactions hit `POST /webhooks/slack` — verified via `SLACK_SIGNING_SECRET` env var. `SLACK_BOT_TOKEN` also required on Railway.
+**Architecture (changed 2026-07-24 — do not revert to the old client-posts model):** the local proxy only *registers* a pending approval and polls; **cordon-server posts the Block Kit card** using the workspace's stored (AES-GCM encrypted) bot token. Workspaces connect via a **distributed Slack app** OAuth flow (`/slack/install` → `/slack/callback`, `slack_installs` table, migration 0008). `SlackApprovalChannel(endpoint, apiKey)` — the old `(botToken, channel, endpoint, apiKey)` signature and client-side `chat.postMessage` are gone. Backward-compat: if an old CLI sends `slackTs`, the server skips posting.
+
+- Slack interactions hit `POST /webhooks/slack` — HMAC-verified against the single distributed-app `SLACK_SIGNING_SECRET`; the per-workspace bot token for `chat.update` is resolved by `team_id` from `slack_installs` (env `SLACK_BOT_TOKEN` is the legacy single-tenant fallback).
+- Server env: `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, `SLACK_SIGNING_SECRET`, `TOKEN_ENC_KEY` (32-byte base64, encrypts stored bot tokens — never rotate it or stored installs become undecryptable).
+- Self-host / single-tenant path (bring-your-own Slack app) documented in `docs/slack-approvals-setup.md`.
 
 ## Rate Limiting
 

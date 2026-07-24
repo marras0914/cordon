@@ -46,7 +46,7 @@
         "name": "Can I send approvals to Slack instead of the terminal?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Set approvals.channel to 'slack' in cordon.config.ts and give Cordon a Slack bot token plus the channel. Under the hood it is a small Slack app — a bot token with chat:write, invited to your channel, and Interactivity pointed at your Cordon server so the approve/deny buttons resolve. When a tool call requires approval, Cordon posts a message with the tool name, arguments, and approve/deny buttons, and the agent waits until a response comes back."
+          "text": "Yes, and on the hosted plan it is one click. Connect your workspace once with Add to Slack in the dashboard, then set approvals: { channel: 'slack' }. There is no bot token to create or paste. A flagged tool call posts an Approve / Deny card with the tool name and arguments to your channel, the agent waits, and the approver's name lands on the audit record. If you self-host Cordon you wire your own Slack app instead."
         }
       },
       {
@@ -632,13 +632,13 @@ export default defineConfig({
         <div class="faq-item">
           <h3>Can I send approvals to Slack instead of the terminal?</h3>
           <p>
-            Yes. Set <code>approvals.channel</code> to <code>'slack'</code> in your config and
-            give Cordon a Slack <em>bot token</em> plus the channel. Under the hood it's a small
-            Slack app — a bot token with <code>chat:write</code>, invited to your channel, and
-            Interactivity pointed at your Cordon server so the Approve/Deny buttons resolve. When a
-            tool call requires approval, Cordon posts the tool name, arguments, and approve/deny
-            buttons, and the agent waits until a response comes back. See the Slack approvals setup
-            guide for the exact steps.
+            Yes, and on the hosted plan it's one click. Connect your workspace once with
+            <strong>Add to Slack</strong> in the dashboard, then set
+            <code>approvals: { channel: 'slack' }</code>. There's no bot token to create or paste.
+            A flagged tool call posts an Approve / Deny card with the tool name and arguments to
+            your channel, the agent waits, and the approver's name lands on the audit record. If you
+            self-host Cordon you wire your own Slack app instead. Both paths are in the Slack
+            approvals setup guide.
           </p>
         </div>
 
