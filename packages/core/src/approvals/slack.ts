@@ -27,6 +27,8 @@ export class SlackApprovalChannel {
           toolName: ctx.toolName,
           serverName: ctx.serverName,
           args: ctx.args,
+          // Lets the server record an exact expiry (recoverable-after-timeout).
+          timeoutMs: ctx.timeoutMs,
         }),
       });
       if (!res.ok) {
