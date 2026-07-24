@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cordon for MCP — Security gateway for MCP tool calls</title>
-  <meta name="description" content="Cordon for MCP. The security gateway for MCP tool calls — enforces policies, logs every tool call, and pauses dangerous operations for human approval. Sits between your LLM client and MCP servers." />
+  <meta name="description" content="Cordon for MCP. The security gateway for MCP tool calls — enforces sequence-aware policies, logs every call, pauses dangerous operations for human approval in Slack, and flags when your agents start behaving differently. Sits between your LLM client and MCP servers." />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' fill='%2314b8a6'>◈</text></svg>" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -336,6 +336,64 @@
 
     footer a { color: var(--muted); }
     footer a:hover { color: var(--text); text-decoration: none; }
+
+    /* ANIMATED TERMINAL (replaces the old demo gif) */
+    .term-demo { max-width: 720px; margin: 0 auto; }
+    .term-demo .bar {
+      display: flex; gap: 0.4rem; padding: 0.6rem 0.9rem;
+      background: #111; border: 1px solid var(--border); border-bottom: none;
+      border-radius: 8px 8px 0 0;
+    }
+    .term-demo .bar i { width: 11px; height: 11px; border-radius: 50%; background: #333; }
+    .term-demo .body {
+      background: var(--code-bg); border: 1px solid var(--border);
+      border-radius: 0 0 8px 8px; padding: 1.1rem 1.3rem;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85rem; line-height: 1.8; min-height: 220px;
+    }
+    .term-demo .line { display: block; opacity: 0; white-space: pre-wrap; }
+    .term-demo.play .line { animation: termline 0.4s ease forwards; }
+    .term-demo.play .line:nth-child(1) { animation-delay: 0.15s; }
+    .term-demo.play .line:nth-child(2) { animation-delay: 0.55s; }
+    .term-demo.play .line:nth-child(3) { animation-delay: 1.15s; }
+    .term-demo.play .line:nth-child(4) { animation-delay: 1.75s; }
+    .term-demo.play .line:nth-child(5) { animation-delay: 2.45s; }
+    .term-demo.play .line:nth-child(6) { animation-delay: 2.7s; }
+    .term-demo.play .line:nth-child(7) { animation-delay: 2.95s; }
+    .term-demo .caret {
+      display: inline-block; width: 8px; height: 1em; vertical-align: text-bottom;
+      background: var(--accent); margin-left: 2px; animation: blink 1s steps(1) infinite;
+    }
+    @keyframes termline { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+    @keyframes blink { 50% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .term-demo .line { opacity: 1 !important; animation: none !important; }
+      .term-demo .caret { animation: none; }
+    }
+
+    /* DRIFT "WHAT CHANGED" CARD */
+    .drift-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 1.25rem 1.5rem; margin-top: 2rem;
+      font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem;
+    }
+    .drift-card .dc-title {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 1rem;
+    }
+    .drift-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.6rem 0; border-top: 1px solid var(--border);
+    }
+    .drift-row:first-of-type { border-top: none; }
+    .drift-pill {
+      flex-shrink: 0; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+      text-transform: uppercase; padding: 0.15rem 0.5rem; border-radius: 4px;
+    }
+    .drift-pill.new { color: var(--yellow); border: 1px solid var(--yellow); }
+    .drift-pill.spike { color: var(--red); border: 1px solid var(--red); }
+    .drift-row .dr-tool { color: var(--text); }
+    .drift-row .dr-note { color: var(--muted); margin-left: auto; font-size: 0.8rem; }
   </style>
   <!-- Privacy-friendly product analytics by PostHog (US cloud, cookieless) -->
   <script>
@@ -406,14 +464,21 @@
   ]
 }</code></pre>
 
-      <div style="margin-top: 2rem; text-align: center;">
-        <img src="assets/tier1-call-graph-demo.gif"
-             alt="Demo: two read_data calls succeed, write_file then blocked by sequence rule"
-             style="max-width: 100%; width: 720px; border-radius: 8px; border: 1px solid var(--border);" />
-        <p style="color: var(--muted); font-size: 0.85rem; margin-top: 0.75rem;">
-          <code>read_data</code> succeeds. <code>write_file</code> succeeds. The <em>sequence</em> gets caught.
-        </p>
+      <div class="term-demo" style="margin-top: 2rem;">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="body">
+          <span class="line"><span class="t-muted">$</span> cordon start</span>
+          <span class="line"><span class="t-muted">  gateway ready · policy loaded</span></span>
+          <span class="line"><span class="t-green">  ✓ read_database("customers")</span><span class="t-muted">   allowed</span></span>
+          <span class="line"><span class="t-green">  ✓ read_database("sessions")</span><span class="t-muted">    allowed</span></span>
+          <span class="line"><span class="t-red t-bold">  ✗ write_file → BLOCKED</span></span>
+          <span class="line"><span class="t-muted">    rule   : read_* → write_file (same turn)</span></span>
+          <span class="line"><span class="t-muted">    reason : potential exfil — read then write<span class="caret"></span></span></span>
+        </div>
       </div>
+      <p style="color: var(--muted); font-size: 0.85rem; margin-top: 0.75rem; text-align: center;">
+        Each read is allowed on its own. The <em>sequence</em> gets caught.
+      </p>
 
       <p style="color: var(--text); font-size: 0.95rem; margin-top: 2rem; font-weight: 600;">
         No other MCP gateway does this at the policy layer. <a href="/vs/mcpx/" style="font-weight: 400; font-size: 0.9rem;">See how Cordon compares →</a>
@@ -427,11 +492,15 @@
       <h2>How it works</h2>
       <p style="color: var(--muted); max-width: 580px;">
         Cordon is a transparent proxy. It requires no changes to your existing MCP servers
-        or Claude Desktop config — <code>cordon init</code> handles the wiring.
+        or client config — <code>cordon init</code> handles the wiring. Every call is
+        checked against your policy and streamed to the audit log on the way through.
       </p>
-      <pre class="arch">Claude Desktop  --stdio--?  <span class="highlight">Cordon</span>  --stdio--?  MCP server A
-                                    --stdio--?  MCP server B
-                                    --stdio--?  MCP server N</pre>
+      <pre class="arch">Claude Desktop / Code / n8n
+        │  stdio or HTTP
+        ▼
+    <span class="highlight">Cordon</span>  ──stdio──▶  MCP server A
+        ├────stdio──▶  MCP server B
+        └────stdio──▶  MCP server N</pre>
     </section>
   </div>
 
@@ -441,8 +510,9 @@
       <h2>Works with your setup</h2>
       <p style="color: var(--muted); max-width: 580px;">
         Any MCP client, any MCP server. Cordon speaks stdio — the transport every
-        major client already uses. <code>cordon init</code> auto-patches supported
-        clients; others drop in with a one-line config change.
+        major client already uses — and Streamable HTTP for a shared team gateway
+        (n8n and other HTTP-speaking clients). <code>cordon init</code> auto-patches
+        supported clients; others drop in with a one-line config change.
       </p>
       <div class="works-with">
         <div class="works-with-item"><span class="dot"></span>Claude Desktop</div>
@@ -450,6 +520,7 @@
         <div class="works-with-item"><span class="dot"></span>Cursor</div>
         <div class="works-with-item"><span class="dot"></span>Windsurf</div>
         <div class="works-with-item"><span class="dot"></span>VS Code</div>
+        <div class="works-with-item"><span class="dot"></span>n8n (HTTP)</div>
         <div class="works-with-item"><span class="dot"></span>Any stdio MCP client</div>
       </div>
       <p class="works-with-sub">
@@ -471,17 +542,59 @@
         <div class="feature">
           <div class="feature-icon">✋</div>
           <h3>Human-in-the-loop approvals</h3>
-          <p>Dangerous operations pause and wait. Approve or deny from the terminal or a Slack channel before anything runs. <a href="/use-cases/human-in-the-loop/">How it works →</a></p>
+          <p>Dangerous operations pause and wait for a human. Connect your workspace once — <em>Add to Slack</em> — and approvals post to your channel with the approver's name captured on the record. Terminal approvals too. <a href="/use-cases/human-in-the-loop/">How it works →</a></p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">📈</div>
+          <h3>Drift detection</h3>
+          <p>Cordon watches your agents and tells you when they start doing something new — a tool never called before, a new read-then-write sequence, a volume spike. A weekly digest to Slack, or live in the dashboard.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">✨</div>
+          <h3>Suggested policies</h3>
+          <p>From your real audit history, Cordon proposes the rules worth adding — the gates and rate limits that match how your agents actually behave. Review, then ship.</p>
         </div>
         <div class="feature">
           <div class="feature-icon">📋</div>
           <h3>Full audit log</h3>
-          <p>Every tool call — args, result, policy decision, timestamp — logged to a file or shipped to the hosted dashboard.</p>
+          <p>Every tool call — args, result, policy decision, approver, timestamp — logged to a file or shipped to the hosted dashboard. Search by tool, export CSV or JSON for an auditor.</p>
         </div>
         <div class="feature">
           <div class="feature-icon">☁️</div>
           <h3>Hosted dashboard</h3>
-          <p>Centralized audit logs across your team. Manage API keys, view call history, export for compliance.</p>
+          <p>Centralized audit logs across your team. Manage API keys, view call history, connect Slack, export for compliance.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- DRIFT / WHAT CHANGED -->
+  <div class="container">
+    <section>
+      <h2>Know when your agents change</h2>
+      <p style="color: var(--muted); max-width: 620px;">
+        A policy tells you what you already decided to block. <strong style="color: var(--text);">Drift tells you what you didn't see coming.</strong>
+        Cordon learns each agent's normal behavior from its own history, then flags
+        the new stuff — a tool it never called before, a fresh read-then-write
+        sequence, a sudden volume spike. Delivered as a weekly Slack digest, or live
+        in the dashboard.
+      </p>
+      <div class="drift-card">
+        <div class="dc-title">What changed this week</div>
+        <div class="drift-row">
+          <span class="drift-pill new">New tool</span>
+          <span class="dr-tool">delete_file</span>
+          <span class="dr-note">first seen Tuesday · 14 calls</span>
+        </div>
+        <div class="drift-row">
+          <span class="drift-pill new">New sequence</span>
+          <span class="dr-tool">query_customers → http_post</span>
+          <span class="dr-note">read → external send</span>
+        </div>
+        <div class="drift-row">
+          <span class="drift-pill spike">Spike</span>
+          <span class="dr-tool">execute_sql</span>
+          <span class="dr-note">6× the baseline daily rate</span>
         </div>
       </div>
     </section>
@@ -492,13 +605,13 @@
     <section>
       <h2>What your team sees</h2>
       <p style="color: var(--muted); max-width: 580px;">
-        Every call streams to the hosted dashboard. The same call-graph block
-        from the hero lands as a red row in the audit log — args, reason, and
-        the rule that fired all in one place.
+        Every call streams to the hosted dashboard — allowed, blocked, or approved,
+        with args, the rule that fired, and who signed off. Search the log, and
+        export CSV or JSON to hand an auditor.
       </p>
       <div style="margin-top: 2rem; text-align: center;">
-        <img src="assets/dashboard-call-graph.png"
-             alt="Cordon dashboard showing two read_database calls allowed and a write_file blocked by call-graph rule"
+        <img src="assets/dashboard-audit-log.png"
+             alt="Cordon dashboard audit log — an external POST blocked as an exfil attempt, and a benefit-status write approved by a named case supervisor"
              style="max-width: 100%; border-radius: 8px; border: 1px solid var(--border);" />
       </div>
     </section>
@@ -545,6 +658,19 @@ export default defineConfig({
         <div class="step-label">Step 4 — Start</div>
         <pre><code>cordon start</code></pre>
       </div>
+
+      <div class="step">
+        <div class="step-label">Step 5 — Approvals in your Slack (optional)</div>
+        <p style="color: var(--muted); font-size: 0.95rem; margin: 0.5rem 0 0;">
+          Click <strong style="color: var(--text);">Add to Slack</strong> once in the
+          <a href="https://app.getcordon.com/dashboard/">dashboard</a> — no bot token to
+          create or paste. Then a sensitive tool call posts an Approve / Deny card to
+          your channel and pauses until a human clicks, with the approver's name saved
+          to the audit record.
+        </p>
+        <pre><code>// cordon.config.ts — that's the whole approvals block
+approvals: { channel: 'slack' },</code></pre>
+      </div>
     </section>
   </div>
 
@@ -574,6 +700,22 @@ export default defineConfig({
     <a href="mailto:partners@getcordon.com">Partners</a>
     <br/><span style="color: var(--muted); font-size: 0.85em;">&copy; 2026 Elephant Tortoise LLC</span>
   </footer>
+
+  <!-- Reveal the animated terminal when it scrolls into view (replays on re-entry). -->
+  <script>
+    (function () {
+      var t = document.querySelector('.term-demo');
+      if (!t) return;
+      if (!('IntersectionObserver' in window)) { t.classList.add('play'); return; }
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) t.classList.add('play');
+          else t.classList.remove('play');
+        });
+      }, { threshold: 0.4 });
+      io.observe(t);
+    })();
+  </script>
 
 </body>
 </html>
