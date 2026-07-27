@@ -3,6 +3,7 @@ import { startCommand } from '../commands/start.js';
 import { initCommand } from '../commands/init.js';
 import { loginCommand } from '../commands/login.js';
 import { logoutCommand } from '../commands/logout.js';
+import { replayCommand } from '../commands/replay.js';
 
 const program = new Command();
 
@@ -37,5 +38,16 @@ program
   .command('logout')
   .description('Remove the local Cordon credentials')
   .action(logoutCommand);
+
+program
+  .command('replay <callId>')
+  .description('Re-execute a tool call that was approved after it timed out')
+  .option('-c, --config <path>', 'Path to cordon.config.ts')
+  .option('--endpoint <url>', 'Cordon server endpoint (defaults to your logged-in instance)')
+  .option('--yes', 'Skip the confirmation prompt')
+  .action((callId, opts) => replayCommand(callId, opts).catch((err) => {
+    process.stderr.write(`\x1b[31merror\x1b[0m: replay failed: ${String(err)}\n`);
+    process.exit(1);
+  }));
 
 program.parse();
