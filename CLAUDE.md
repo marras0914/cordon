@@ -8,10 +8,10 @@ Security gateway for AI agents. Sits between the LLM client (Claude Desktop, Cur
 packages/
   sdk/    @getcordon/policy          — defineConfig() helper + all TypeScript types (no runtime deps)
   core/   @getcordon/core     — proxy engine: gateway, policy, approvals, audit, upstream manager
-  cli/    @getcordon/cli          — CLI commands: `cordon start`, `cordon init`
+  cli/    @getcordon/cli          — CLI commands: `cordon init`, `start`, `login`, `logout`, `replay`
 
 examples/
-  security-showcase/          — interactive demo + block-test.ts integration tests (5/5 passing)
+  security-showcase/          — interactive demo + block-test.ts integration tests (7/7 passing)
 ```
 
 Planning docs live in the parent directory (`../cordon-deux/`) alongside the code.
@@ -23,7 +23,7 @@ Planning docs live in the parent directory (`../cordon-deux/`) alongside the cod
 npm install          # install all workspace deps
 npm run build        # build all packages via turbo (respects dependency order: sdk → core → cli)
 npm run dev          # watch mode for all packages
-npm test             # run unit tests (vitest, 62 tests in @getcordon/core)
+npm test             # run unit tests (vitest — 148 tests in @getcordon/core as of 2026-07-28)
 ```
 
 Building a single package:
@@ -72,6 +72,7 @@ Claude Desktop ──stdio──▶ CordonGateway ──stdio──▶ [MCP serv
 | `packages/core/src/audit/logger.ts` | Structured JSON audit log to stderr or file |
 | `packages/core/src/__tests__/` | Unit tests: policy-engine, audit-logger, interceptor (36 tests) |
 | `packages/cli/src/commands/init.ts` | Reads claude_desktop_config.json, generates cordon.config.ts, patches Claude Desktop |
+| `packages/cli/src/commands/replay.ts` | `cordon replay <callId>` — re-runs a late-approved call (see Durable approvals below) |
 | `packages/cli/src/config-loader.ts` | Loads cordon.config.ts at runtime via jiti (no separate compile step) |
 | `examples/security-showcase/dangerous-server.ts` | Mock MCP server used in demo |
 | `examples/security-showcase/agent-sim.ts` | Interactive demo — simulates agent making tool calls |
@@ -133,10 +134,12 @@ npm username: `marras0914`
 GitHub repo: `github.com/marras0914/cordon`
 npm org: `getcordon` (org name `cordon` was taken)
 
-**Published versions (current as of 2026-05-02):**
-- `@getcordon/policy@0.2.9` (sdk role; renamed from `cordon-sdk` on 2026-05-02)
-- `@getcordon/core@0.3.2`
-- `@getcordon/cli@0.2.1` (renamed from `cordon-cli` on 2026-05-02; bin name still `cordon`)
+**Published versions (verified against the registry 2026-07-28):**
+- `@getcordon/policy@0.4.1` (sdk role; renamed from `cordon-sdk` on 2026-05-02)
+- `@getcordon/core@0.5.1`
+- `@getcordon/cli@0.4.2` (renamed from `cordon-cli` on 2026-05-02; bin name still `cordon`)
+
+Recent milestones: `0.4.1`/`0.5.1` (2026-07-24) shipped plug-and-play Slack; `cli@0.4.2` (2026-07-27) added `cordon replay`. **A README edit does not reach npm until the next publish** — the npm package page renders the README from the published tarball, so doc-only fixes need a version bump to become visible there (they show on GitHub immediately).
 
 The unscoped names `cordon-sdk` and `cordon-cli` are deprecated on npm with migration pointers. They still resolve, but `npm install` warns users to switch.
 
@@ -164,6 +167,7 @@ If a future publish 403's with no obvious cause, run a stub-README publish to co
 ## What's Not Built Yet (v1 deferred)
 
 - **Multi-tenant** hosted HTTP gateway ("Architecture B" — per-tenant routing behind a hosted endpoint). The single-tenant HTTP above is done; only the multi-tenant hosted layer is deferred.
+- **Dashboard-triggered replay** — see the Durable approvals section; needs a local polling agent.
 - OTLP audit output
 - Dynamic policy reload (requires restart)
 - Tool argument-level policies
@@ -201,6 +205,23 @@ approvals: {
 - Slack interactions hit `POST /webhooks/slack` — HMAC-verified against the single distributed-app `SLACK_SIGNING_SECRET`; the per-workspace bot token for `chat.update` is resolved by `team_id` from `slack_installs` (env `SLACK_BOT_TOKEN` is the legacy single-tenant fallback).
 - Server env: `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, `SLACK_SIGNING_SECRET`, `TOKEN_ENC_KEY` (32-byte base64, encrypts stored bot tokens — never rotate it or stored installs become undecryptable).
 - Self-host / single-tenant path (bring-your-own Slack app) documented in `docs/slack-approvals-setup.md`.
+
+## Durable approvals + replay (shipped 2026-07-24 / 2026-07-27)
+
+A timed-out approval still denies the call and lets the agent move on — Cordon never holds the agent open indefinitely. What changed is that the *request* is no longer discarded.
+
+- **Phase 1 (capture, server-side):** `approvals.expires_at` + `resolved_late` (migration 0009). `GET /approvals/recoverable` returns expired-unresolved and late-resolved records with full context; the Slack webhook flags `resolved_late` when someone clicks Approve after expiry; the dashboard lists them under **What changed → Timed-out approvals** with a dismiss ✕ (`DELETE /approvals/:callId`, scoped to the key).
+- **Phase 2 (replay, CLI):** `cordon replay <callId>` in `packages/cli/src/commands/replay.ts`. Fetches the record from `GET /approvals/:callId`, **refuses unless `status === 'approved' && resolvedLate`**, confirms interactively (`--yes` skips), then calls the tool via a bare `UpstreamManager` for that one server.
+
+**Design decisions that should not be quietly reverted:**
+
+- **Replay deliberately bypasses the gateway and the policy loop.** It is a human-authorized recovery of a call a human already approved, so re-running policy evaluation would just re-prompt. This is why it constructs `UpstreamManager` directly instead of booting a gateway.
+- **The guardrail is the safety property.** Replaying a normally-approved call would double-execute it; replaying a denied or pending one would run something nobody authorized. Only the approved-after-timeout case never ran, so only it is replayable. Don't loosen this.
+- **It recovers the tool call, not the agent session.** The originating agent is gone. Say this plainly in any docs or demo — overclaiming "resumable agents" is the failure mode here.
+- **`AuditLogger` with hosted output batches, so `close()` is required** or the replay event is silently lost. Replay logs `tool_call_completed` / `tool_call_errored` with `reason: 'replay of late-approved call'`.
+- On success it dismisses the record; on error it leaves it in the recoverable list so you can retry.
+
+**Not built:** dashboard-triggered replay. The server can't reach into the user's machine to run a tool, so it would need a polling agent on the local side; the dashboard prints the command to run instead. Rationale in `../cordon-deux/planning/durable-context-resume-feature.md` (private repo — don't link it from public docs).
 
 ## Rate Limiting
 

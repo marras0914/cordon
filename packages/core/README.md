@@ -41,6 +41,7 @@ await gateway.stop();
 - **UpstreamManager** — manages child-process MCP servers, aggregates their tool registries, filters unknown tools against per-server `knownTools` catalogs
 - **PolicyEngine** — evaluates policies per tool call (allow / block / approve / approve-writes / read-only / log-only / hidden / sql-read-only / sql-approve-writes); `evaluate(server, tool, args?)` accepts optional call arguments for SQL-aware policies; includes tool-name write-detection heuristic for `read-only` and `approve-writes`; `isHidden()` query for the gateway's tools/list filter
 - **classifySql** (from `./policies/sql-classifier`) — pure helper that parses a SQL string (PostgreSQL dialect) and classifies it as `read` / `write` / `unknown`. Fail-closed on parse error. Exportable for use outside the policy engine.
+- **Call-graph rules** — sequence-aware constraints (`read_data → write_file: block`) evaluated alongside per-tool policy. Severity is additive: a call-graph rule can raise a decision (`allow → approve → block`) but never lower it.
 - **Interceptor** — the hot path; every tool call flows through policy check + rate limit + audit log
 - **ApprovalManager** — routes approvals to terminal or Slack channels
 - **AuditLogger** — structured JSON logging to stdout, file, or hosted endpoint

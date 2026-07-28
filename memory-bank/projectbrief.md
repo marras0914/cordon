@@ -1,5 +1,18 @@
 # Project Brief
 
+> [!WARNING]
+> **Historical snapshot — superseded, do not trust for current status.**
+> This file was last updated **2026-03-14** and describes an early "Month 1 / Month 2"
+> phase of the project. Several statements here are now simply wrong: rate limiting
+> shipped, the hosted backend has been deployed at `app.getcordon.com` since May 2026,
+> and the project was renamed **Cordon for MCP**.
+>
+> For current information use:
+> - [`README.md`](../README.md) — features, policies, quickstart, roadmap
+> - [`CLAUDE.md`](../CLAUDE.md) — architecture, conventions, published versions, gotchas
+>
+> Kept only as a record of early design intent.
+
 ## What Cordon Is
 
 Cordon is a security gateway for AI agents. It sits between the LLM client (Claude Desktop, Cursor, custom agents) and MCP servers, intercepting every tool call and enforcing a policy before it reaches the backend.

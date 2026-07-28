@@ -27,10 +27,18 @@
       },
       {
         "@type": "Question",
-        "name": "Does the agent wait while a human approves?",
+        "name": "Does the agent actually wait while a human approves?",
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "Yes. The approval is synchronous. Cordon intercepts the tool call before it reaches the MCP server and holds it. The agent's turn is suspended — no tool runs, no result is returned — until a human responds. The agent then continues from exactly where it paused, with the approved or denied result."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What happens if nobody responds to the approval in time?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The call is denied after timeoutMs and the agent moves on with an error — Cordon does not hold your agent open indefinitely. The request itself is kept, though. Cordon retains the pending approval with its full context and lists it in the dashboard under What changed, Timed-out approvals. If someone approves the card after it expired, that late decision is recorded and you can run the call with cordon replay <callId>, which executes the tool and logs the outcome to the same audit stream. One important limit: replay recovers the tool call, not the agent's session — the agent that originally asked is gone. Only a call approved after timing out can be replayed, because replaying a call that already ran would execute it twice."
         }
       },
       {
@@ -483,7 +491,8 @@ export default defineConfig({
   ],
   approvals: {
     channel: 'terminal',                 // or 'slack'
-    timeoutMs: 60_000,                   // 60 seconds before auto-deny
+    timeoutMs: 60_000,                   // 60s before auto-deny; the request is
+                                         // retained and replayable if approved late
   },
   audit: { enabled: true },
 });</code></pre>
@@ -616,6 +625,22 @@ export default defineConfig({
             server. The agent's turn is fully suspended — no tool runs, no result is returned —
             until you respond. The agent then continues from where it paused with the approved or
             denied result.
+          </p>
+        </div>
+
+        <div class="faq-item">
+          <h3>What happens if nobody responds to the approval in time?</h3>
+          <p>
+            The call is denied after <code>timeoutMs</code> and the agent moves on with an error —
+            Cordon does not hold your agent open indefinitely. The request itself is kept, though.
+            Cordon retains the pending approval with its full context and lists it in the dashboard
+            under <strong>What changed → Timed-out approvals</strong>. If someone approves the card
+            after it expired, that late decision is recorded and you can run the call with
+            <code>cordon replay &lt;callId&gt;</code>, which executes the tool and logs the outcome
+            to the same audit stream. One limit worth knowing: replay recovers the
+            <em>tool call</em>, not the agent's session — the agent that originally asked is gone.
+            And only a call approved <em>after</em> timing out can be replayed, since replaying a
+            call that already ran would execute it twice.
           </p>
         </div>
 

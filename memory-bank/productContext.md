@@ -1,5 +1,18 @@
 # Product Context
 
+> [!WARNING]
+> **Historical snapshot — superseded, do not trust for current status.**
+> This file was last updated **2026-03-14** and describes an early "Month 1 / Month 2"
+> phase of the project. Several statements here are now simply wrong: rate limiting
+> shipped, the hosted backend has been deployed at `app.getcordon.com` since May 2026,
+> and the project was renamed **Cordon for MCP**.
+>
+> For current information use:
+> - [`README.md`](../README.md) — features, policies, quickstart, roadmap
+> - [`CLAUDE.md`](../CLAUDE.md) — architecture, conventions, published versions, gotchas
+>
+> Kept only as a record of early design intent.
+
 ## Why This Exists
 
 MCP adoption is accelerating but security tooling is essentially nonexistent. The closest competitor (mcp-guardian) validated the market then stalled — dormant since August 2025, stdio-only, no hosted layer, rough install experience.

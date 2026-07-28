@@ -91,9 +91,26 @@ approvals: {
 
 ## Timeout behavior
 If no one responds within `timeoutMs`, the call is **denied** and logged as
-`tool_call_denied` with reason "Approval timed out." (Preserving richer context
-for a dropped call so it can be resumed is a separate, requested feature — see
-`cordon-deux/planning/durable-context-resume-feature.md`.)
+`tool_call_denied` with reason "Approval timed out." The agent gets an error and
+moves on — Cordon does not hold the agent open indefinitely.
+
+The decision isn't thrown away, though. The pending approval is retained with its
+full context (server, tool, args, expiry), and the dashboard lists it under
+**What changed → Timed-out approvals**, where you can dismiss it or copy a replay
+command. If someone clicks Approve on the card *after* it expired, the approval is
+recorded as resolved-late and the call becomes replayable:
+
+```bash
+cordon replay <callId>
+```
+
+That re-runs the tool against the upstream server and logs the result to your
+audit stream with reason `replay of late-approved call`. Two limits to be aware
+of: it recovers the **tool call, not the agent's session** (the original agent is
+gone), and only a call approved *after* timing out can be replayed — replaying a
+normally-approved call would double-execute it. See the
+[`@getcordon/cli` README](https://www.npmjs.com/package/@getcordon/cli) for the
+full behavior.
 
 ## Zero-setup alternative
 `approvals: { channel: 'terminal' }` prompts in the terminal running cordon — no

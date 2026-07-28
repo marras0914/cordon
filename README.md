@@ -133,7 +133,8 @@ export default defineConfig({
 
   approvals: {
     channel: 'terminal',
-    timeoutMs: 60_000,            // auto-deny after 60s if no response
+    timeoutMs: 60_000,            // auto-deny after 60s; the request is retained
+                                  // and replayable if approved late
   },
 });
 ```
@@ -193,6 +194,14 @@ When a tool call requires approval, Cordon pauses the agent and prompts you dire
 The agent waits. You decide.
 
 Prefer Slack? Connect your workspace once with **Add to Slack** in the dashboard — no bot token to create or paste — then set `approvals: { channel: 'slack' }`. A flagged call posts an Approve / Deny card to your channel and pauses until a human clicks, and the approver's name is written onto the audit record. See the [Slack approvals setup](docs/slack-approvals-setup.md).
+
+**When nobody answers in time.** The call is denied and the agent moves on, but the request isn't lost. Cordon retains the pending approval with its full context, and the dashboard lists it under **What changed → Timed-out approvals**. If someone approves the card after it expired, that late decision is recorded and the call can be re-run:
+
+```bash
+cordon replay <callId>
+```
+
+The replay executes the tool and logs the outcome to the same audit stream with reason `replay of late-approved call`. It recovers the **tool call, not the agent's session** — the agent that asked is long gone. Only a call approved *after* timing out is replayable, since replaying a call that already ran would double-execute it.
 
 ### Audit Logging
 
@@ -449,8 +458,11 @@ Policies can be set at the server level (default for all tools) or per-tool (ove
 - [x] `cordon init` — auto-reads Claude Desktop config and patches it
 - [x] Rate limiting — sliding window, global / per-server / per-tool
 - [x] Hosted dashboard — audit log history, CSV/JSON export, GitHub OAuth, free for individuals
-- [x] Per-agent policies + call-graph constraints — sequence-aware blocking with additive severity *(in `main`; ships in v0.2.0)*
+- [x] Per-agent policies + call-graph constraints — sequence-aware blocking with additive severity
 - [x] HTTP/Streamable HTTP transport — single-tenant gateway for n8n and HTTP-speaking MCP clients
+- [x] Drift detection — "what changed about how your agents behave this week" in the dashboard
+- [x] Suggested policies — analyzes your audit history and proposes call-graph rules and gates
+- [x] Durable approvals — timed-out approvals are retained, surfaced, and replayable via `cordon replay`
 - [ ] Multi-tenant HTTP gateway — many agents on one Cordon instance with per-call `agentId` from headers
 - [ ] OpenTelemetry export
 - [ ] Team accounts and centralized governance
