@@ -137,9 +137,9 @@ npm org: `getcordon` (org name `cordon` was taken)
 **Published versions (verified against the registry 2026-07-28):**
 - `@getcordon/policy@0.4.1` (sdk role; renamed from `cordon-sdk` on 2026-05-02)
 - `@getcordon/core@0.5.1`
-- `@getcordon/cli@0.4.2` (renamed from `cordon-cli` on 2026-05-02; bin name still `cordon`)
+- `@getcordon/cli@0.4.3` (renamed from `cordon-cli` on 2026-05-02; bin name still `cordon`)
 
-Recent milestones: `0.4.1`/`0.5.1` (2026-07-24) shipped plug-and-play Slack; `cli@0.4.2` (2026-07-27) added `cordon replay`. **A README edit does not reach npm until the next publish** — the npm package page renders the README from the published tarball, so doc-only fixes need a version bump to become visible there (they show on GitHub immediately).
+Recent milestones: `0.4.1`/`0.5.1` (2026-07-24) shipped plug-and-play Slack; `cli@0.4.2` (2026-07-27) added `cordon replay`; `cli@0.4.3` (2026-07-28) is a docs-only release that put the replay documentation on the npm page (dist byte-identical to 0.4.2). **A README edit does not reach npm until the next publish** — the npm package page renders the README from the published tarball, so doc-only fixes need a version bump to become visible there (they show on GitHub immediately).
 
 The unscoped names `cordon-sdk` and `cordon-cli` are deprecated on npm with migration pointers. They still resolve, but `npm install` warns users to switch.
 
